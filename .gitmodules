@@ -1,0 +1,9 @@
+[submodule "vendor/googletest"]
+	path = vendor/googletest
+	url = https://github.com/google/googletest.git
+[submodule "cmake-utils"]
+	path = cmake-utils
+	url = ssh://git.slyris.eu:29418/cmake-utils
+[submodule "vendor/core"]
+	path = vendor/core
+	url = ssh://git.slyris.eu:29418/core
