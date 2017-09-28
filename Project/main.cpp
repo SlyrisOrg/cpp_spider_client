@@ -2,28 +2,23 @@
 // Created by roman sztergbaum on 27/09/2017.
 //
 
-//
-// timer.cpp
-// ~~~~~~~~~
-//
-// Copyright (c) 2003-2016 Christopher M. Kohlhoff (chris at kohlhoff dot com)
-//
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
-
 #include <iostream>
-#include <boost/asio.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
+#include "Configuration.hpp"
+#include "CSpiderCore.hpp"
 
 int main()
 {
-    boost::asio::io_service io;
+    try {
+        spi::Configuration::initialize();
+        asio::io_service ioService;
+        asio::ssl::context ctx(boost::asio::ssl::context::sslv23);
+        spi::CSpiderCore core;
 
-    boost::asio::deadline_timer t(io, boost::posix_time::seconds(5));
-    t.wait();
-
-    std::cout << "Hello, world!" << std::endl;
-
+        ioService.run();
+        core.run();
+    }
+    catch (const std::exception &error) {
+        std::cerr << error.what() << std::endl;
+    }
     return 0;
 }

