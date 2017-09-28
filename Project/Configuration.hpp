@@ -17,6 +17,8 @@ namespace fs = boost::filesystem;
 
 namespace spi::cfg
 {
+    constexpr unsigned short port = 31337;
+    constexpr const char *address = "127.0.0.1";
 }
 
 namespace spi
