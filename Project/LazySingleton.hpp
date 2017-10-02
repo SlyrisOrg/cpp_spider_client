@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <mutex>
+#include <utility>
 #include <utils/NonCopyable.hpp>
 
 namespace utils
@@ -40,10 +41,10 @@ namespace utils
         }
 
     private:
-        static std::unique_ptr<T> _instance;
+        static std::unique_ptr <T> _instance;
     };
 }
 
-template <class T> std::unique_ptr<T> utils::LazySingleton<T>::_instance = nullptr;
+template <class T> std::unique_ptr <T> utils::LazySingleton<T>::_instance = nullptr;
 
 #endif //SPIDER_CLIENT_LAZYSINGLETON_HPP

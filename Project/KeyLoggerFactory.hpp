@@ -22,9 +22,11 @@ namespace spi
     class Factory
     {
     public:
-        static always_inline KeyLogPtr createKeyLogger(LogHandle &logHandle)
+        static always_inline KeyLogPtr
+
+        createKeyLogger()
         {
-            return details::createKeyLogger(logHandle);
+            return details::createKeyLogger();
         }
     };
 }

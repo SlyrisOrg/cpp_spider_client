@@ -402,3 +402,7 @@ __pycache__/
 
 # OpenCover UI analysis results
 OpenCover/
+
+cmake-build-debug/
+
+cmake-build-release/

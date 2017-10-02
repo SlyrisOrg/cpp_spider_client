@@ -43,7 +43,7 @@ namespace spi
     private:
         Connection _clientSocket;
         LogHandle _logHandle;
-        KeyLogPtr _keyLogger{Factory::createKeyLogger(_logHandle)};
+        KeyLogPtr _keyLogger{Factory::createKeyLogger()};
         lg::Logger _log{"client-spider", lg::Level::Debug};
     };
 }

@@ -7,29 +7,18 @@
 
 #include <utility>
 #include <memory>
+#include <Protocol/Protocol.hpp>
 
 #define KEYLOGGER_LOG utl::LightMagenta << "{'KeyLogger'}"  << utl::Reset
-
-struct KeyEvent
-{
-};
-
-struct MouseClick
-{
-};
-
-struct MouseMove
-{
-};
 
 namespace spi
 {
     class KeyLogger
     {
     public:
-        using MouseMoveCallback = std::function<void(MouseMove &&)>;
-        using KeyPressCallback = std::function<void(KeyEvent &&)>;
-        using MouseClickCallback = std::function<void(MouseClick &&)>;
+        using MouseMoveCallback = std::function<void(spi::proto::MouseMove &&)>;
+        using KeyPressCallback = std::function<void(spi::proto::KeyEvent &&)>;
+        using MouseClickCallback = std::function<void(spi::proto::MouseClick &&)>;
         virtual void setup() = 0;
         virtual void run() = 0;
         virtual void stop() = 0;
@@ -60,6 +49,7 @@ namespace spi
 
     protected:
         lg::Logger _log{"keylogger", lg::Level::Debug};
+    public:
         MouseMoveCallback _mouseMoveCallback;
         MouseClickCallback _mouseClickCallback;
         KeyPressCallback _keyPressCallback;

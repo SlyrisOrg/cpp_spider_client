@@ -25,9 +25,9 @@ namespace spi
         void setup() override
         {
             _log(lg::Info) << OSX_LOG << " successfully initialized." << std::endl;
-            onKeyboardEvent([](KeyEvent &&){;});
-            onMouseClickEvent([](MouseClick &&){;});
-            onMouseMoveEvent([](MouseMove &&){;});
+            onKeyboardEvent([](KeyEvent &&) { ; });
+            onMouseClickEvent([](MouseClick &&) { ; });
+            onMouseMoveEvent([](MouseMove &&) { ; });
         }
 
         void run() override
@@ -47,9 +47,9 @@ namespace spi
 
 namespace spi::details
 {
-    static always_inline KeyLogPtr createKeyLogger(LogHandle &logHandle)
+    static always_inline KeyLogPtr createKeyLogger()
     {
-        return std::make_unique<OSXKeyLogger>(logHandle);
+        return std::make_unique<OSXKeyLogger>();
     }
 }
 

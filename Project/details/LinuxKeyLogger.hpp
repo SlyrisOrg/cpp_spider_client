@@ -26,9 +26,9 @@ namespace spi
 
 namespace spi::details
 {
-    static always_inline KeyLogPtr createKeyLogger(LogHandle &logHandle)
+    static always_inline KeyLogPtr createKeyLogger()
     {
-        return std::make_unique<LinuxKeyLogger>(logHandle);
+        return std::make_unique<LinuxKeyLogger>();
     }
 }
 
