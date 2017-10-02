@@ -1,9 +1,9 @@
 //
-// Created by Blowa-XPS on 02-Oct-17.
+// Created by doom on 28/09/17.
 //
 
-#ifndef SPIDER_CLIENT_PROTOCOL_HPP
-#define SPIDER_CLIENT_PROTOCOL_HPP
+#ifndef SPIDER_SERVER_MESSAGES_HPP
+#define SPIDER_SERVER_MESSAGES_HPP
 
 #include <cstring>
 #include <chrono>
@@ -26,6 +26,18 @@ namespace spi::proto
         {
             return "Data could not be unserialized";
         }
+    };
+
+    struct ISerializable
+    {
+    public:
+        virtual BufferT serialize() const noexcept = 0;
+    };
+
+    struct IStringifiable
+    {
+    public:
+        virtual std::string toString() const noexcept = 0;
     };
 
     class Serializer
@@ -62,12 +74,12 @@ namespace spi::proto
             serializeRaw(v, n);
         }
 
-        static void serializeBytes(BufferT &v, const std::vector <Byte> &buff) noexcept
+        static void serializeBytes(BufferT &v, const std::vector<Byte> &buff) noexcept
         {
             v.insert(v.end(), buff.begin(), buff.end());
         }
 
-        static void serializeBuff(BufferT &v, const std::vector <Byte> &buff) noexcept
+        static void serializeBuff(BufferT &v, const std::vector<Byte> &buff) noexcept
         {
             serializeInt(v, static_cast<uint32_t>(buff.size()));
             serializeBytes(v, buff);
@@ -91,16 +103,12 @@ namespace spi::proto
             return ret;
         }
 
-        static always_inline uint32_t
-
-        unserializeInt(const BufferT &v, size_t startPos)
+        static always_inline uint32_t unserializeInt(const BufferT &v, size_t startPos)
         {
             return unserializeRaw<uint32_t>(v, startPos);
         }
 
-        static always_inline uint16_t
-
-        unserializeShort(const BufferT &v, size_t startPos)
+        static always_inline uint16_t unserializeShort(const BufferT &v, size_t startPos)
         {
             return unserializeRaw<uint16_t>(v, startPos);
         }
@@ -113,19 +121,19 @@ namespace spi::proto
             return std::chrono::steady_clock::time_point(dur);
         }
 
-        static std::vector <Byte> unserializeBytes(const BufferT &v, size_t startPos, size_t size)
+        static std::vector<Byte> unserializeBytes(const BufferT &v, size_t startPos, size_t size)
         {
             if (unlikely(v.size() - startPos < size)) {
                 throw UnserializationError();
             }
 
-            std::vector <Byte> ret;
+            std::vector<Byte> ret;
 
             ret.insert(ret.begin(), v.begin() + startPos, v.begin() + startPos + size);
             return ret;
         }
 
-        static std::vector <Byte> unserializeBuff(const BufferT &v, size_t startPos)
+        static std::vector<Byte> unserializeBuff(const BufferT &v, size_t startPos)
         {
             unsigned int size = unserializeInt(v, startPos);
 
@@ -133,13 +141,7 @@ namespace spi::proto
         }
     };
 
-    struct ISerializable
-    {
-    public:
-        virtual BufferT serialize() const noexcept = 0;
-    };
-
-    struct ReplyCode : public ISerializable
+    struct ReplyCode : public ISerializable, public IStringifiable
     {
         uint32_t code;
 
@@ -161,9 +163,14 @@ namespace spi::proto
             Serializer::serializeInt(ret, code);
             return ret;
         }
+
+        std::string toString() const noexcept override
+        {
+            return "[ReplyCode] " + std::to_string(code);
+        }
     };
 
-    struct Bye : public ISerializable
+    struct Bye : public ISerializable, public IStringifiable
     {
         static constexpr const size_t SerializedSize = 0;
 
@@ -171,11 +178,16 @@ namespace spi::proto
         {
             return BufferT();
         }
+
+        std::string toString() const noexcept override
+        {
+            return "[Bye]";
+        }
     };
 
-    struct RawData : public ISerializable
+    struct RawData : public ISerializable, public IStringifiable
     {
-        std::vector <Byte> bytes;
+        std::vector<Byte> bytes;
 
         RawData() = default;
 
@@ -194,9 +206,14 @@ namespace spi::proto
             ret.insert(ret.end(), bytes.begin(), bytes.end());
             return ret;
         }
+
+        std::string toString() const noexcept override
+        {
+            return "[RawData] size: " + std::to_string(bytes.size());
+        }
     };
 
-    struct Hello : public ISerializable
+    struct Hello : public ISerializable, public IStringifiable
     {
         std::string macAddress{"aaaaaa"};
         utils::MD5 md5;
@@ -226,20 +243,32 @@ namespace spi::proto
 
             ret.reserve(SerializedSize);
 
-            std::vector <Byte> macAddrBytes(macAddress.begin(), macAddress.end());
+            std::vector<Byte> macAddrBytes(macAddress.begin(), macAddress.end());
             Serializer::serializeBytes(ret, macAddrBytes);
 
             Serializer::serializeShort(ret, version);
 
-            std::vector <Byte> bytes(md5.raw().begin(), md5.raw().end());
+            std::vector<Byte> bytes(md5.raw().begin(), md5.raw().end());
             Serializer::serializeBytes(ret, bytes);
 
             Serializer::serializeShort(ret, port);
             return ret;
         }
+
+        std::string toString() const noexcept override
+        {
+            std::stringstream ss;
+
+            ss << "[Hello] ";
+            ss << "MAC: " << macAddress << ", ";
+            ss << "version: " << version << ", ";
+            ss << "MD5: " << md5.toString() << ", ";
+            ss << "port: " << port;
+            return ss.str();
+        }
     };
 
-    struct KeyEvent : public ISerializable
+    struct KeyEvent : public ISerializable, public IStringifiable
     {
         std::chrono::steady_clock::time_point timestamp;
         KeyCode code;
@@ -252,8 +281,8 @@ namespace spi::proto
         KeyEvent(const BufferT &buff)
         {
             timestamp = Serializer::unserializeTimestamp(buff, 0);
-            code = static_cast<KeyCode>(Serializer::unserializeInt(buff, 8));
-            state = static_cast<KeyState>(Serializer::unserializeInt(buff, 12));
+            code = static_cast<KeyCode::EnumType>(Serializer::unserializeInt(buff, 8));
+            state = static_cast<KeyState::EnumType>(Serializer::unserializeInt(buff, 12));
         }
 
         BufferT serialize() const noexcept override
@@ -268,9 +297,20 @@ namespace spi::proto
 
             return ret;
         }
+
+        std::string toString() const noexcept override
+        {
+            std::stringstream ss;
+
+            ss << "[KeyEvent] ";
+            ss << "timestamp: " << timestamp.time_since_epoch().count() << ", ";
+            ss << "code: " << code.toString() << ", ";
+            ss << "state: " << state.toString();
+            return ss.str();
+        }
     };
 
-    struct MouseClick : public ISerializable
+    struct MouseClick : public ISerializable, public IStringifiable
     {
         std::chrono::steady_clock::time_point timestamp;
         uint32_t x;
@@ -287,8 +327,8 @@ namespace spi::proto
             timestamp = Serializer::unserializeTimestamp(buff, 0);
             x = Serializer::unserializeInt(buff, 8);
             y = Serializer::unserializeInt(buff, 12);
-            state = static_cast<KeyState>(Serializer::unserializeInt(buff, 16));
-            button = static_cast<MouseButton>(Serializer::unserializeInt(buff, 20));
+            state = static_cast<KeyState::EnumType>(Serializer::unserializeInt(buff, 16));
+            button = static_cast<MouseButton::EnumType>(Serializer::unserializeInt(buff, 20));
         }
 
         BufferT serialize() const noexcept override
@@ -304,9 +344,22 @@ namespace spi::proto
             Serializer::serializeInt(ret, static_cast<uint32_t>(button));
             return ret;
         }
+
+        std::string toString() const noexcept override
+        {
+            std::stringstream ss;
+
+            ss << "[MouseClick] ";
+            ss << "timestamp: " << timestamp.time_since_epoch().count() << ", ";
+            ss << "x: " << x << ", ";
+            ss << "y: " << y << ", ";
+            ss << "state: " << state.toString() << ", ";
+            ss << "button: " << button.toString();
+            return ss.str();
+        }
     };
 
-    struct MouseMove : public ISerializable
+    struct MouseMove : public ISerializable, public IStringifiable
     {
         std::chrono::steady_clock::time_point timestamp;
         uint32_t x;
@@ -325,7 +378,7 @@ namespace spi::proto
 
         BufferT serialize() const noexcept override
         {
-            std::vector <Byte> ret;
+            std::vector<Byte> ret;
 
             ret.reserve(SerializedSize);
 
@@ -334,11 +387,22 @@ namespace spi::proto
             Serializer::serializeInt(ret, y);
             return ret;
         }
+
+        std::string toString() const noexcept override
+        {
+            std::stringstream ss;
+
+            ss << "[MouseMove] ";
+            ss << "timestamp: " << timestamp.time_since_epoch().count() << ", ";
+            ss << "x: " << x << ", ";
+            ss << "y: " << y << ", ";
+            return ss.str();
+        }
     };
 
-    struct ImageData : public ISerializable
+    struct ImageData : public ISerializable, public IStringifiable
     {
-        std::vector <Byte> bytes;
+        std::vector<Byte> bytes;
 
         ImageData(const BufferT &buff)
         {
@@ -354,9 +418,14 @@ namespace spi::proto
             Serializer::serializeBuff(ret, bytes);
             return ret;
         }
+
+        std::string toString() const noexcept override
+        {
+            return "[ImageData] size: " + std::to_string(bytes.size());
+        }
     };
 
-    struct Screenshot : public ISerializable
+    struct Screenshot : public ISerializable, public IStringifiable
     {
         static constexpr const size_t SerializedSize = 0;
 
@@ -364,9 +433,14 @@ namespace spi::proto
         {
             return BufferT();
         }
+
+        std::string toString() const noexcept override
+        {
+            return "[Screenshot] requested screenshot";
+        }
     };
 
-    struct StealthMode : public ISerializable
+    struct StealthMode : public ISerializable, public IStringifiable
     {
         static constexpr const size_t SerializedSize = 0;
 
@@ -374,17 +448,27 @@ namespace spi::proto
         {
             return BufferT();
         }
+
+        std::string toString() const noexcept override
+        {
+            return "[StealthMode] requested switch to stealth mode";
+        }
     };
 
-    struct ActiveMode : public ISerializable
+    struct ActiveMode : public ISerializable, public IStringifiable
     {
         static constexpr const size_t SerializedSize = 0;
 
         BufferT serialize() const noexcept override
         {
             return BufferT();
+        }
+
+        std::string toString() const noexcept override
+        {
+            return "[ActiveMode] requested switch to active mode";
         }
     };
 }
 
-#endif //SPIDER_CLIENT_PROTOCOL_HPP
+#endif //SPIDER_SERVER_MESSAGES_HPP
