@@ -13,7 +13,9 @@ namespace spi
     class ErrorCode
     {
     public:
-        ErrorCode(const boost::system::error_code &ec) noexcept : _ec(ec)
+        using InternalT = boost::system::error_code;
+
+        ErrorCode(const InternalT &ec) noexcept : _ec(ec)
         {
         }
 
@@ -22,8 +24,23 @@ namespace spi
             return !_ec;
         }
 
+        operator bool() const noexcept
+        {
+            return (bool)_ec;
+        }
+
+        const InternalT &get() const noexcept
+        {
+            return _ec;
+        }
+
+        std::string message() const noexcept
+        {
+            return _ec.message();
+        }
+
     private:
-        const boost::system::error_code _ec;
+        const InternalT _ec;
     };
 
     namespace net

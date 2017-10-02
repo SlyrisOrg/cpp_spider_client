@@ -13,7 +13,8 @@ namespace spi::net
     {
     public:
         BufferView(void *data, size_t size) noexcept : _data(data), _size(size)
-        {}
+        {
+        }
 
         void *data() const noexcept
         {

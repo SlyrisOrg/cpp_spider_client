@@ -15,8 +15,9 @@ namespace spi::net
     class TCPAcceptor
     {
     public:
-        TCPAcceptor(net::IOService &io) noexcept : _acc(io.get())
-        {}
+        TCPAcceptor(net::IOManager &io) noexcept : _acc(io.get())
+        {
+        }
 
         void bind(unsigned short port)
         {

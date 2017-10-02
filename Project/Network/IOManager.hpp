@@ -6,15 +6,19 @@
 #define SPIDER_SERVER_IOSERVICE_HPP
 
 #include <boost/asio/io_service.hpp>
+#include <boost/asio/signal_set.hpp>
+#include <Network/ErrorCode.hpp>
 
 namespace asio = boost::asio;
 
 namespace spi::net
 {
-    class IOService
+    class IOManager
     {
     public:
-        auto &get()
+        using InternalT = asio::io_service;
+
+        InternalT &get() noexcept
         {
             return _service;
         }
@@ -29,8 +33,19 @@ namespace spi::net
             _service.stop();
         }
 
+        void onTerminationSignals(const std::function<void()> &func)
+        {
+            _signals.add(SIGINT);
+            _signals.add(SIGTERM);
+
+            _signals.async_wait([func]([[maybe_unused]] const ErrorCode &ec, [[maybe_unused]] int sig) {
+                func();
+            });
+        }
+
     private:
-        asio::io_service _service;
+        InternalT _service;
+        asio::signal_set _signals{_service};
     };
 }
 

@@ -14,6 +14,8 @@ namespace spi::net
     class SSLContext
     {
     public:
+        using InternalT = asio::ssl::context;
+
         enum Version
         {
             SSLv23 = asio::ssl::context::sslv23,
@@ -21,7 +23,7 @@ namespace spi::net
             SSLv23Client = asio::ssl::context::sslv23_client,
         };
 
-        auto &get() noexcept
+        InternalT &get() noexcept
         {
             return _ctx;
         }
@@ -30,18 +32,28 @@ namespace spi::net
         {
         }
 
-        void usePrivateKeyFile(const std::string &path) noexcept
+        bool usePrivateKeyFile(const std::string &path) noexcept
         {
-            _ctx.use_private_key_file(path, asio::ssl::context::pem);
+            try {
+                _ctx.use_private_key_file(path, asio::ssl::context::pem);
+            } catch (const std::exception &e) {
+                return false;
+            }
+            return true;
         }
 
-        void useCertificateFile(const std::string &path) noexcept
+        bool useCertificateFile(const std::string &path) noexcept
         {
-            _ctx.use_certificate_file(path, asio::ssl::context::pem);
+            try {
+                _ctx.use_certificate_file(path, asio::ssl::context::pem);
+            } catch (const std::exception &e) {
+                return false;
+            }
+            return true;
         }
 
     private:
-        asio::ssl::context _ctx;
+        InternalT _ctx;
     };
 }
 

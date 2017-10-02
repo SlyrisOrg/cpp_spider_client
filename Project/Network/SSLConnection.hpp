@@ -12,7 +12,7 @@
 
 namespace asio = boost::asio;
 
-namespace spi
+namespace spi::net
 {
     class SSLConnection
     {
@@ -25,8 +25,19 @@ namespace spi
 
         using Socket = asio::ssl::stream<asio::ip::tcp::socket>;
 
-        SSLConnection(net::IOService &service, net::SSLContext &ctx) noexcept : _socket(service.get(), ctx.get())
-        {}
+        SSLConnection(IOManager &service, SSLContext &ctx) noexcept : _socket(service.get(), ctx.get())
+        {
+        }
+
+        template <typename CallBackT>
+        void asyncConnect(const std::string &host, unsigned short port, CallBackT &&cb) noexcept
+        {
+            asio::ip::tcp::resolver resolver(_socket.get_io_service());
+            asio::ip::tcp::resolver::query q(host, std::to_string(port));
+            auto it = resolver.resolve(q);
+
+            asio::async_connect(_socket.lowest_layer(), it, cb);
+        }
 
         template <typename CallBackT>
         void asyncHandshake(HandshakeType type, CallBackT &&cb) noexcept
