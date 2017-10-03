@@ -7,23 +7,39 @@
 
 #include <string_view>
 #include "Configuration.hpp"
+#include "AbstractLogHandle.hpp"
 
 #define LOG_HANDLE utl::LightBlue << "{'LogHandle'}" << utl::Reset
 
 namespace spi
 {
-    class LogHandle
+    class LogHandle : public AbstractLogHandle
     {
     public:
         ~LogHandle()
         {
             _log(lg::Info) << LOG_HANDLE << " shutting down." << std::endl;
         }
-    public:
+
         void setup()
         {
             _log(lg::Info) << LOG_HANDLE << " log directory path -> ['" << _workingDir << "'].\n";
             _log(lg::Info) << LOG_HANDLE << " successfully initialized\n";
+        }
+
+        void appendEntry(const ILoggable &loggable) override
+        {
+
+        }
+
+        void rotate() override
+        {
+
+        }
+
+        void flush() override
+        {
+
         }
 
     private:
