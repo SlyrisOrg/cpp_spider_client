@@ -16,7 +16,7 @@ namespace spi
     class LogHandle : public AbstractLogHandle
     {
     public:
-        ~LogHandle()
+        ~LogHandle() override
         {
             _log(lg::Info) << LOG_HANDLE << " shutting down." << std::endl;
         }

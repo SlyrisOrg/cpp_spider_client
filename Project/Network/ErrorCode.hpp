@@ -45,8 +45,8 @@ namespace spi
 
     namespace net
     {
-        static constexpr const auto ErrorPlaceholder = boost::asio::placeholders::error;
-        static constexpr const auto BytesTransferredPlaceholder = boost::asio::placeholders::bytes_transferred;
+        static const auto ErrorPlaceholder = boost::asio::placeholders::error;
+        static const auto BytesTransferredPlaceholder = boost::asio::placeholders::bytes_transferred;
     }
 }
 

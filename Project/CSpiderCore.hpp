@@ -33,6 +33,7 @@ namespace spi
             __setup();
             _log(lg::Info) << SPIDER_LOG << " running ..." << std::endl;
             _keyLogger->run();
+            _service.run();
             return true;
         }
 
