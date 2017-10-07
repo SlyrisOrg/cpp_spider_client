@@ -10,11 +10,8 @@ int main()
 {
     try {
         spi::Configuration::initialize();
-        asio::io_service ioService;
-        asio::ssl::context ctx(boost::asio::ssl::context::sslv23);
         spi::CSpiderCore core;
 
-        ioService.run();
         core.run();
     }
     catch (const std::exception &error) {

