@@ -2,8 +2,8 @@
 // Created by doom on 28/09/17.
 //
 
-#ifndef SPIDER_SERVER_MESSAGES_HPP
-#define SPIDER_SERVER_MESSAGES_HPP
+#ifndef SPIDER_PROTO_MESSAGES_HPP
+#define SPIDER_PROTO_MESSAGES_HPP
 
 #include <cstring>
 #include <chrono>
@@ -13,10 +13,13 @@
 #include <utils/Endian.hpp>
 #include <utils/MD5.hpp>
 #include <Utils/ILoggable.hpp>
+#include <net/MACAddress.hpp>
 #include <Protocol/MessagesEnums.hpp>
 
 namespace spi::proto
 {
+    static constexpr const size_t MessageHeaderSize = sizeof(uint32_t);
+
     struct ReplyCode : public ILoggable
     {
         uint32_t code;
@@ -30,14 +33,18 @@ namespace spi::proto
             code = Serializer::unserializeInt(buff, 0);
         }
 
-        Buffer serialize() const noexcept override
+        void serialize(Buffer &out) const noexcept override
         {
-            Buffer ret;
+            out.reserve(out.size() + SerializedSize);
 
-            ret.reserve(SerializedSize);
+            Serializer::serializeInt(out, code);
+        }
 
-            Serializer::serializeInt(ret, code);
-            return ret;
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::ReplyCode));
         }
 
         std::string stringify() const noexcept override
@@ -50,9 +57,15 @@ namespace spi::proto
     {
         static constexpr const size_t SerializedSize = 0;
 
-        Buffer serialize() const noexcept override
+        void serialize([[maybe_unused]] Buffer &out) const noexcept override
         {
-            return Buffer();
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::Bye));
         }
 
         std::string stringify() const noexcept override
@@ -72,15 +85,19 @@ namespace spi::proto
             bytes = Serializer::unserializeBuff(buff, 0);
         }
 
-        Buffer serialize() const noexcept override
+        void serialize(Buffer &out) const noexcept override
         {
-            Buffer ret;
+            out.reserve(out.size() + bytes.size() + 4);
 
-            ret.reserve(bytes.size() + 4);
+            Serializer::serializeInt(out, static_cast<uint32_t>(bytes.size()));
+            out.insert(out.end(), bytes.begin(), bytes.end());
+        }
 
-            Serializer::serializeInt(ret, static_cast<uint32_t>(bytes.size()));
-            ret.insert(ret.end(), bytes.begin(), bytes.end());
-            return ret;
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::RawData));
         }
 
         std::string stringify() const noexcept override
@@ -91,7 +108,7 @@ namespace spi::proto
 
     struct Hello : public ILoggable
     {
-        std::string macAddress{"aaaaaa"};
+        ::net::MACAddress macAddress;
         utils::MD5 md5;
         uint16_t version;
         uint16_t port;
@@ -102,33 +119,38 @@ namespace spi::proto
 
         Hello(const Buffer &buff)
         {
-            auto macAddrBytes = Serializer::unserializeBytes(buff, 0, 6);
-            macAddress = std::string(macAddrBytes.begin(), macAddrBytes.end());
+            macAddress = Serializer::unserializeMACAddress(buff, 0, 6);
+
             version = Serializer::unserializeShort(buff, 6);
 
             auto md5Bytes = Serializer::unserializeBytes(buff, 8, 16);
             utils::MD5::RawMD5 raw;
             std::copy(md5Bytes.begin(), md5Bytes.end(), raw.begin());
             md5.setRaw(raw);
+
             port = Serializer::unserializeShort(buff, 24);
         }
 
-        Buffer serialize() const noexcept override
+        void serialize(Buffer &out) const noexcept override
         {
-            Buffer ret;
+            out.reserve(out.size() + SerializedSize);
 
-            ret.reserve(SerializedSize);
+            std::vector<Byte> macAddrBytes(macAddress.raw().begin(), macAddress.raw().end());
+            Serializer::serializeBytes(out, macAddrBytes);
 
-            std::vector<Byte> macAddrBytes(macAddress.begin(), macAddress.end());
-            Serializer::serializeBytes(ret, macAddrBytes);
-
-            Serializer::serializeShort(ret, version);
+            Serializer::serializeShort(out, version);
 
             std::vector<Byte> bytes(md5.raw().begin(), md5.raw().end());
-            Serializer::serializeBytes(ret, bytes);
+            Serializer::serializeBytes(out, bytes);
 
-            Serializer::serializeShort(ret, port);
-            return ret;
+            Serializer::serializeShort(out, port);
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::Hello));
         }
 
         std::string stringify() const noexcept override
@@ -136,7 +158,7 @@ namespace spi::proto
             std::stringstream ss;
 
             ss << "[Hello] ";
-            ss << "MAC: " << macAddress << ", ";
+            ss << "MAC: " << macAddress.toString() << ", ";
             ss << "version: " << version << ", ";
             ss << "MD5: " << md5.toString() << ", ";
             ss << "port: " << port;
@@ -161,17 +183,20 @@ namespace spi::proto
             state = static_cast<KeyState::EnumType>(Serializer::unserializeInt(buff, 12));
         }
 
-        Buffer serialize() const noexcept override
+        void serialize(Buffer &out) const noexcept override
         {
-            Buffer ret;
+            out.reserve(out.size() + SerializedSize);
 
-            ret.reserve(SerializedSize);
+            Serializer::serializeTimestamp(out, timestamp);
+            Serializer::serializeInt(out, static_cast<uint32_t>(code));
+            Serializer::serializeInt(out, static_cast<uint32_t>(state));
+        }
 
-            Serializer::serializeTimestamp(ret, timestamp);
-            Serializer::serializeInt(ret, static_cast<uint32_t>(code));
-            Serializer::serializeInt(ret, static_cast<uint32_t>(state));
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
 
-            return ret;
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::KeyEvent));
         }
 
         std::string stringify() const noexcept override
@@ -207,18 +232,22 @@ namespace spi::proto
             button = static_cast<MouseButton::EnumType>(Serializer::unserializeInt(buff, 20));
         }
 
-        Buffer serialize() const noexcept override
+        void serialize(Buffer &out) const noexcept override
         {
-            Buffer ret;
+            out.reserve(out.size() + SerializedSize);
 
-            ret.reserve(SerializedSize);
+            Serializer::serializeTimestamp(out, timestamp);
+            Serializer::serializeInt(out, x);
+            Serializer::serializeInt(out, y);
+            Serializer::serializeInt(out, static_cast<uint32_t>(state));
+            Serializer::serializeInt(out, static_cast<uint32_t>(button));
+        }
 
-            Serializer::serializeTimestamp(ret, timestamp);
-            Serializer::serializeInt(ret, x);
-            Serializer::serializeInt(ret, y);
-            Serializer::serializeInt(ret, static_cast<uint32_t>(state));
-            Serializer::serializeInt(ret, static_cast<uint32_t>(button));
-            return ret;
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::MouseClick));
         }
 
         std::string stringify() const noexcept override
@@ -252,16 +281,20 @@ namespace spi::proto
             y = Serializer::unserializeInt(buff, 12);
         }
 
-        Buffer serialize() const noexcept override
+        void serialize(Buffer &out) const noexcept override
         {
-            std::vector<Byte> ret;
+            out.reserve(SerializedSize);
 
-            ret.reserve(SerializedSize);
+            Serializer::serializeTimestamp(out, timestamp);
+            Serializer::serializeInt(out, x);
+            Serializer::serializeInt(out, y);
+        }
 
-            Serializer::serializeTimestamp(ret, timestamp);
-            Serializer::serializeInt(ret, x);
-            Serializer::serializeInt(ret, y);
-            return ret;
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::MouseMove));
         }
 
         std::string stringify() const noexcept override
@@ -280,19 +313,25 @@ namespace spi::proto
     {
         std::vector<Byte> bytes;
 
+        ImageData() = default;
+
         ImageData(const Buffer &buff)
         {
             bytes = Serializer::unserializeBuff(buff, 0);
         }
 
-        Buffer serialize() const noexcept override
+        void serialize(Buffer &out) const noexcept override
         {
-            Buffer ret;
+            out.reserve(out.size() + bytes.size() + sizeof(uint32_t));
 
-            ret.reserve(bytes.size() + sizeof(uint32_t));
+            Serializer::serializeBuff(out, bytes);
+        }
 
-            Serializer::serializeBuff(ret, bytes);
-            return ret;
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::ImageData));
         }
 
         std::string stringify() const noexcept override
@@ -301,28 +340,19 @@ namespace spi::proto
         }
     };
 
-    struct Screenshot : public ILoggable
-    {
-        static constexpr const size_t SerializedSize = 0;
-
-        Buffer serialize() const noexcept override
-        {
-            return Buffer();
-        }
-
-        std::string stringify() const noexcept override
-        {
-            return "[Screenshot] requested screenshot";
-        }
-    };
-
     struct StealthMode : public ILoggable
     {
         static constexpr const size_t SerializedSize = 0;
 
-        Buffer serialize() const noexcept override
+        void serialize([[maybe_unused]] Buffer &out) const noexcept override
         {
-            return Buffer();
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::StealthMode));
         }
 
         std::string stringify() const noexcept override
@@ -335,9 +365,15 @@ namespace spi::proto
     {
         static constexpr const size_t SerializedSize = 0;
 
-        Buffer serialize() const noexcept override
+        void serialize([[maybe_unused]] Buffer &out) const noexcept override
         {
-            return Buffer();
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::ActiveMode));
         }
 
         std::string stringify() const noexcept override
@@ -345,6 +381,176 @@ namespace spi::proto
             return "[ActiveMode] requested switch to active mode";
         }
     };
+
+    struct Screenshot : public ILoggable
+    {
+        static constexpr const size_t SerializedSize = 0;
+
+        void serialize([[maybe_unused]] Buffer &out) const noexcept override
+        {
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::Screenshot));
+        }
+
+        std::string stringify() const noexcept override
+        {
+            return "[Screenshot] requested screenshot";
+        }
+    };
+
+    struct RList : public ILoggable
+    {
+        static constexpr const size_t SerializedSize = 0;
+
+        void serialize([[maybe_unused]] Buffer &out) const noexcept override
+        {
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::RList));
+        }
+
+        std::string stringify() const noexcept override
+        {
+            return "[RList] remote shell requested list of connected clients";
+        }
+    };
+
+    struct RListReply : public ILoggable
+    {
+        std::vector<::net::MACAddress> connectedClients;
+
+        static constexpr const size_t SerializedSize = 4;
+
+        void serialize(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + SerializedSize + connectedClients.size() * 6);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(connectedClients.size()));
+            for (const auto &cur : connectedClients) {
+                Serializer::serializeBytes(out, cur.raw());
+            }
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::RListReply));
+        }
+
+        std::string stringify() const noexcept override
+        {
+            return "[RList] replying with a list of clients";
+        }
+    };
+
+    struct RStealthMode : public ILoggable
+    {
+        ::net::MACAddress addr;
+
+        static constexpr const size_t SerializedSize = 6;
+
+        RStealthMode() = default;
+
+        RStealthMode(const Buffer &buff)
+        {
+            addr = Serializer::unserializeMACAddress(buff, 0, 6);
+        }
+
+        void serialize(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + SerializedSize);
+
+            Serializer::serializeBytes(out, addr.raw());
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::RStealthMode));
+        }
+
+        std::string stringify() const noexcept override
+        {
+            return "[RStealthMode] remote shell requested switching to stealth mode";
+        }
+    };
+
+    struct RActiveMode : public ILoggable
+    {
+        ::net::MACAddress addr;
+
+        static constexpr const size_t SerializedSize = 6;
+
+        RActiveMode() = default;
+
+        RActiveMode(const Buffer &buff)
+        {
+            addr = Serializer::unserializeMACAddress(buff, 0, 6);
+        }
+
+        void serialize(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + SerializedSize);
+
+            Serializer::serializeBytes(out, addr.raw());
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::RActiveMode));
+        }
+
+        std::string stringify() const noexcept override
+        {
+            return "[RActiveMode] remote shell requested switching to active mode";
+        }
+    };
+
+    struct RScreenshot : public ILoggable
+    {
+        ::net::MACAddress addr;
+
+        static constexpr const size_t SerializedSize = 6;
+
+        RScreenshot() = default;
+
+        RScreenshot(const Buffer &buff)
+        {
+            addr = Serializer::unserializeMACAddress(buff, 0, 6);
+        }
+
+        void serialize(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + SerializedSize);
+
+            Serializer::serializeBytes(out, addr.raw());
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::RScreenshot));
+        }
+
+        std::string stringify() const noexcept override
+        {
+            return "[RScreenshot] remote shell requested taking a screenshot";
+        }
+    };
 }
 
-#endif //SPIDER_SERVER_MESSAGES_HPP
+#endif //SPIDER_PROTO_MESSAGES_HPP

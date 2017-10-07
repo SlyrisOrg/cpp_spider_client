@@ -2,8 +2,8 @@
 // Created by doom on 29/09/17.
 //
 
-#ifndef SPIDER_SERVER_MESSAGESENUMS_HPP
-#define SPIDER_SERVER_MESSAGESENUMS_HPP
+#ifndef SPIDER_PROTO_MESSAGESENUMS_HPP
+#define SPIDER_PROTO_MESSAGESENUMS_HPP
 
 #include <utils/Enums.hpp>
 
@@ -19,9 +19,14 @@ namespace spi::proto
          MouseClick,
          MouseMove,
          ImageData,
-         Screenshot,
          StealthMode,
-         ActiveMode
+         ActiveMode,
+         Screenshot,
+         RList,
+         RListReply,
+         RStealthMode,
+         RActiveMode,
+         RScreenshot
     );
 
     ENUM(KeyCode,
@@ -61,6 +66,12 @@ namespace spi::proto
          Middle,
          Right
     );
+
+    ENUM(ReplyType,
+         KO,
+         OK,
+         Update
+    );
 }
 
-#endif //SPIDER_SERVER_MESSAGESENUMS_HPP
+#endif //SPIDER_PROTO_MESSAGESENUMS_HPP
