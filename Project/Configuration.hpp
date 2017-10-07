@@ -9,6 +9,13 @@
 #include <boost/asio.hpp>
 #include <log/Logger.hpp>
 
+#ifdef UNIX
+# define FILENAME "spider_client"
+#endif
+#ifdef WIN32
+# define FILENAME "spider_client.exe"
+#endif
+
 namespace lg = logging;
 namespace utl = utils;
 namespace asio = boost::asio;
@@ -18,7 +25,9 @@ namespace fs = boost::filesystem;
 namespace spi::cfg
 {
     constexpr unsigned short port = 31337;
+    constexpr unsigned short portAcceptor = 31300;
     constexpr const char *address = "127.0.0.1";
+    constexpr const char *filename = FILENAME;
 }
 
 namespace spi
@@ -28,7 +37,6 @@ namespace spi
     public:
         static void initialize()
         {
-
         };
     };
 }
