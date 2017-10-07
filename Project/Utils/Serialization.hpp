@@ -7,6 +7,9 @@
 
 #include <vector>
 #include <exception>
+#include <chrono>
+#include <net/MACAddress.hpp>
+#include <utils/Endian.hpp>
 
 namespace spi
 {
@@ -16,7 +19,7 @@ namespace spi
     class UnserializationError : public std::exception
     {
     public:
-        const char *what() const noexcept
+        const char *what() const noexcept override
         {
             return "Data could not be unserialized";
         }
@@ -25,7 +28,9 @@ namespace spi
     struct ISerializable
     {
     public:
-        virtual Buffer serialize() const noexcept = 0;
+        virtual void serialize(Buffer &) const noexcept = 0;
+
+        virtual void serializeTypeInfo(Buffer &) const noexcept = 0;
     };
 
     class Serializer
@@ -62,7 +67,9 @@ namespace spi
             serializeRaw(v, n);
         }
 
-        static void serializeBytes(Buffer &v, const std::vector<Byte> &buff) noexcept
+        template <typename Container>
+        static std::enable_if_t<std::is_same_v<typename Container::value_type, Byte>>
+        serializeBytes(Buffer &v, const Container &buff) noexcept
         {
             v.insert(v.end(), buff.begin(), buff.end());
         }
@@ -118,6 +125,16 @@ namespace spi
             std::vector<Byte> ret;
 
             ret.insert(ret.begin(), v.begin() + startPos, v.begin() + startPos + size);
+            return ret;
+        }
+
+        static ::net::MACAddress unserializeMACAddress(const Buffer &v, size_t startPos, size_t size)
+        {
+            auto macAddrBytes = Serializer::unserializeBytes(v, startPos, size);
+            ::net::MACAddress ret;
+            ::net::MACAddress::RawMACAddress rawAddr;
+            std::copy(macAddrBytes.begin(), macAddrBytes.end(), rawAddr.begin());
+            ret.setRaw(rawAddr);
             return ret;
         }
 
