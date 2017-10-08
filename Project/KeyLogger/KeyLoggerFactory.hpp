@@ -6,15 +6,14 @@
 #define SPIDER_CLIENT_KEYLOGGERFACTORY_HPP
 
 #include <utils/Config.hpp>
-#include "LogHandle.hpp"
-#include "KeyLogger.hpp"
+#include <KeyLogger/KeyLogger.hpp>
 
 #ifdef USING_OSX
-#include "details/OSXKeyLogger.hpp"
+#include <KeyLogger/details/OSXKeyLogger.hpp>
 #elif defined(USING_WINDOWS)
-#include "details/WinKeyLogger.hpp"
+#include <KeyLogger/details/WinKeyLogger.hpp>
 #elif defined(USING_LINUX)
-#include "details/LinuxKeyLogger.hpp"
+#include <KeyLogger/details/LinuxKeyLogger.hpp>
 #endif
 
 namespace spi

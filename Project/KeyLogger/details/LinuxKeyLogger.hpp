@@ -8,7 +8,7 @@
 #include <memory>
 #include <utils/Config.hpp>
 #include <Network/IOManager.hpp>
-#include "KeyLogger.hpp"
+#include <KeyLogger/KeyLogger.hpp>
 
 
 #define KEYLOGGER_LOG "{'KeyLogger'}"

@@ -8,7 +8,7 @@
 #include <memory>
 #include <utils/Config.hpp>
 #include <Network/IOManager.hpp>
-#include "KeyLogger.hpp"
+#include <Keylogger/KeyLogger.hpp>
 
 #define OSX_LOG "{'OSXKeyLogger'}"
 

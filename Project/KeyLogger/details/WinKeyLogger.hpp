@@ -15,7 +15,7 @@
 #include <utils/Config.hpp>
 #include <Network/IOManager.hpp>
 #include <Protocol/Messages.hpp>
-#include "KeyLogger.hpp"
+#include <Keylogger/KeyLogger.hpp>
 
 namespace spi
 {
