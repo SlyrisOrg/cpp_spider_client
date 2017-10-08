@@ -28,7 +28,7 @@ namespace spi::net
         }
 
         template <typename Buffer, typename CB>
-        void asyncRead(Buffer &buff, CB &&ct)
+        void asyncRead(Buffer &&buff, CB &&ct)
         {
             _input.async_read_some(boost::asio::buffer(buff.data(), buff.size()), std::forward<CB>(ct));
         }
