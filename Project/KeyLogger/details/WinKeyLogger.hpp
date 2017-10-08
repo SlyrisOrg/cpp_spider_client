@@ -240,8 +240,6 @@ namespace spi
 
         void stop() override
         {
-            UnhookWindowsHookEx(_mouseHook);
-            UnhookWindowsHookEx(_keyboardHook);
             _log(logging::Info) << KEYLOGGER_LOG << " [HOOKS] Remove" << std::endl;
         }
 
