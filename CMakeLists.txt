@@ -65,7 +65,7 @@ set(HEADERS_SPIDER
         Project/Configuration.hpp)
 
 if (APPLE)
-    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/OSXKeyLogger.hpp)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/OSXKeyLogger.hpp Project/KeyLogger/details/OSXEventListener.hpp Project/KeyLogger/details/OSXKeyMatchingTable.hpp)
 elseif(WIN32)
     set(HEADERS_SPIDER ${HEADERS_SPIDER}
             Project/KeyLogger/details/WinKeyLogger.hpp
@@ -77,5 +77,12 @@ endif()
 set(SOURCES_SPIDER Project/main.cpp)
 
 add_executable(${PROJECT_NAME} ${SOURCES_SPIDER} ${HEADERS_SPIDER})
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+
+if (APPLE)
+    FIND_LIBRARY(APP_SERVICES_LIBRARY ApplicationServices)
+    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${APP_SERVICES_LIBRARY})
+else()
+    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+endif()
+
 add_subdirectory(test)
