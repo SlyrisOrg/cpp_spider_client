@@ -23,7 +23,32 @@ include_directories(Project)
 include_directories(vendor/core/Project/core-utils/project)
 include_directories(vendor/core/Project/core-network/project)
 
-set(HEADERS_SPIDER Project/CSpiderCore.hpp Project/Configuration.hpp Project/KeyLogger/KeyLogger.hpp Project/KeyLogger/KeyLoggerFactory.hpp Project/LogHandle.hpp Project/Protocol/CommandHandler.hpp Project/Protocol/MessagesEnums.hpp Project/Protocol/Messages.hpp Project/Network/IOManager.hpp Project/Viral.hpp Project/Utils/ILoggable.hpp Project/Utils/Serialization.hpp Project/Utils/Stringification.hpp Project/AbstractLogHandle.hpp Project/Network/ClientSession.hpp Project/Network/SSLConnection.hpp Project/Network/SSLContext.hpp)
+set(HEADERS_SPIDER_NETWORK
+        Project/Network/IOManager.hpp
+        Project/Network/ClientSession.hpp
+        Project/Network/SSLContext.hpp
+        Project/Network/SSLConnection.hpp)
+
+set(HEADERS_SPIDER_PROTOCOL
+        Project/Protocol/CommandHandler.hpp
+        Project/Protocol/MessagesEnums.hpp
+        Project/Protocol/Messages.hpp)
+
+set(HEADERS_SPIDER_KEYLOGGER
+        Project/KeyLogger/KeyLogger.hpp
+        Project/KeyLogger/KeyLoggerFactory.hpp
+        Project/Viral/Viral.hpp)
+
+set(HEADERS_SPIDER_LOGGING
+        Project/Logging/LogHandle.hpp
+        Project/Logging/AbstractLogHandle.hpp)
+
+set(HEADERS_SPIDER Project/CSpiderCore.hpp
+        Project/Configuration.hpp
+        Project/Utils/ILoggable.hpp
+        Project/Utils/Serialization.hpp
+        Project/Utils/Stringification.hpp)
+
 if (APPLE)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/OSXKeyLogger.hpp)
 elseif(WIN32)

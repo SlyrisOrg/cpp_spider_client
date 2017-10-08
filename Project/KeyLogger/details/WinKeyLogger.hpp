@@ -35,21 +35,6 @@ namespace spi
 
         void setup() noexcept override
         {
-            onKeyboardEvent([this](proto::KeyEvent &&event) {
-                _log(logging::Debug) << KEYLOGGER_LOG << " KeyEvent {" << event.code.toString() << "}"
-                                    << std::endl;
-            });
-            onMouseMoveEvent([this](proto::MouseMove &&event) {
-                _log(logging::Debug) << KEYLOGGER_LOG << " MouseMove {\"x\": " << event.x
-                                    << ", \"y\": " << event.y << "}" << std::endl;
-            });
-            onMouseClickEvent([this](proto::MouseClick &&event) {
-                _log(logging::Debug) << KEYLOGGER_LOG << " MouseMove {\"state\": " << event.state.toString()
-                                    << ", \"button\":" << event.button.toString()
-                                    << ", \"x\":" << event.x
-                                    << ", \"y\": " << event.y << "}"
-                                    << std::endl;
-            });
         }
 
         static LRESULT CALLBACK MouseHookProc(int code, WPARAM wParam, LPARAM lParam) noexcept
