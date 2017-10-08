@@ -49,12 +49,16 @@ namespace spi
         {
             proto::Hello hello;
 
-            hello.macAddress = "FFFFFFFF"; // GET MAC ADDRESS
+            hello.macAddress.get();
             hello.md5 = utils::MD5(spi::cfg::filename);
             hello.port = spi::cfg::portAcceptor;
             hello.version = 1;
-            spi::Buffer buffer(hello.serialize());
-            _sslConnection.asyncWriteSome(buffer, boost::bind(&ClientSession::idontknow, this));
+
+            Buffer buff;
+
+            hello.serializeTypeInfo(buff);
+            hello.serialize(buff);
+            _sslConnection.asyncWriteSome(buff, boost::bind(&ClientSession::idontknow, this));
         }
 
         void handshakeSSL(const ErrorCode &errorCode)
