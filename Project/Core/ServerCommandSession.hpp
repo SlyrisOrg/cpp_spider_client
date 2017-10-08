@@ -31,7 +31,7 @@ namespace spi
                            boost::bind(&ServerCommandSession::handleHandshake, this, net::ErrorPlaceholder));
         }
 
-        void setup(Viral *viral)
+        void setup(Viral *viral) noexcept
         {
             _viral = viral;
         }

