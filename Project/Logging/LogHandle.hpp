@@ -85,7 +85,7 @@ namespace spi
                 if (_logWrote + _buffer.size() > _fileMax) {
                     rotate();
                 }
-                _logWrote = _buffer.size();
+                _logWrote += _buffer.size();
                 std::string str(_buffer.begin(), _buffer.end());
                 _out << str << std::endl;
                 _out.flush();
@@ -95,12 +95,12 @@ namespace spi
 
         void rotate() override
         {
-            if (_out.is_open())
-                _out.close();
-            _fileNb += 1;
-            fs::path outPath = (_baseDir / std::to_string(_fileNb)).replace_extension("spi");
-            _out.open(outPath.string());
-            _logWrote = 0;
+          if (_out.is_open())
+              _out.close();
+          _fileNb += 1;
+          fs::path outPath = (_baseDir / std::to_string(_fileNb)).replace_extension("spi");
+          _out.open(outPath.string());
+          _logWrote = 0;
         }
 
     private:
