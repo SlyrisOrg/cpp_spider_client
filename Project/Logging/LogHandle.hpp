@@ -8,6 +8,7 @@
 #include <fstream>
 #include <string_view>
 #include <boost/bind.hpp>
+#include <boost/asio/buffer.hpp>
 #include <Network/SSLConnection.hpp>
 #include <Network/ErrorCode.hpp>
 #include <Protocol/CommandHandler.hpp>
@@ -53,6 +54,7 @@ namespace spi
 
         void connect(net::SSLConnection *conn)
         {
+            _log(lg::Info) << "Connection set" << std::endl;
             _conn = conn;
             __flushLocal();
         }
@@ -77,6 +79,7 @@ namespace spi
         void flush() override
         {
             if (isConnectionValid()) {
+                _log(lg::Info) << "Send packet " << std::endl;
                 _conn->asyncWriteSome(_buffer, boost::bind(&LogHandle::__handleWrite, this, net::ErrorPlaceholder));
             } else {
                 if (_logWrote + _buffer.size() > _fileMax) {
@@ -119,35 +122,41 @@ namespace spi
                         min = n;
                 } catch (const std::exception &e) {
                 }
+            }
+            try {
                 for (unsigned long i = min; i <= max; i++) {
                     if (!isConnectionValid())
                         break;
                     fs::path path = (_baseDir / std::to_string(i)).replace_extension("spi");
+                    std::streampos fileSize = in.tellg();
+                    if (fileSize <= 0) {
+                        continue;
+                    }
                     if (fs::exists(path) && fs::is_regular_file(path)) {
                         in.open(path.string());
                         if (!in.eof() && in.good()) {
                             in.seekg(0, std::ios_base::end);
-                            std::streampos fileSize = in.tellg();
                             if (_fileMax <
                                 static_cast<unsigned long>(fileSize)) // should normally never happen because the buffer is suposely limited to _fileMax
                                 socketFlusher.resize(static_cast<unsigned long>(fileSize));
                             in.seekg(0, std::ios_base::beg);
-                            in.read(&socketFlusher[0], fileSize);
+                            in.read(socketFlusher.data(), fileSize);
                         }
                         in.close();
-                        _conn->asyncWriteSome(socketFlusher,
-                                              boost::bind(&LogHandle::__handleWrite, this, net::ErrorPlaceholder));
+                        _conn->socket().write_some(boost::asio::buffer(socketFlusher.data(), socketFlusher.size()));
                         socketFlusher.clear();
-                        fs::remove(path);
                     }
                 }
+            } catch (std::exception &e) {
+                _log(lg::Error) << e.what() << std::endl;
             }
         }
 
         void __handleWrite(const ErrorCode &error)
         {
             if (!error) {
-                // I might need to read for response here ... hmmm
+                _log(lg::Info) << "Written without error" << std::endl;
+                _buffer.clear();
             } else {
                 _log(lg::Warning) << "Unable to write on server's socket : "
                                   << error.message() << std::endl;

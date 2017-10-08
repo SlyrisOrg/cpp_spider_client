@@ -43,7 +43,12 @@ set(HEADERS_SPIDER_LOGGING
         Project/Logging/LogHandle.hpp
         Project/Logging/AbstractLogHandle.hpp)
 
-set(HEADERS_SPIDER Project/CSpiderCore.hpp
+set(HEADERS_SPIDER
+        ${HEADERS_SPIDER_NETWORK}
+        ${HEADERS_SPIDER_PROTOCOL}
+        ${HEADERS_SPIDER_KEYLOGGER}
+        ${HEADERS_SPIDER_LOGGING}
+        Project/CSpiderCore.hpp
         Project/Configuration.hpp
         Project/Utils/ILoggable.hpp
         Project/Utils/Serialization.hpp
@@ -52,7 +57,9 @@ set(HEADERS_SPIDER Project/CSpiderCore.hpp
 if (APPLE)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/OSXKeyLogger.hpp)
 elseif(WIN32)
-    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/WinKeyLogger.hpp)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER}
+            Project/KeyLogger/details/WinKeyLogger.hpp
+            )
 elseif(LINUX)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/LinuxKeyLogger.hpp)
 endif()

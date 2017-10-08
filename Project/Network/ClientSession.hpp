@@ -18,7 +18,7 @@ namespace spi
     public:
         ClientSession(net::SSLContext &ctx, net::IOManager &service) : _ctx(ctx), _ioManager(service)
         {
-            if (!_ctx.usePrivateKeyFile("p.pem") || !_ctx.useCertificateFile("s.pem")) {
+            if (!_ctx.usePrivateKeyFile("key.pem") || !_ctx.useCertificateFile("cert.pem")) {
                 _log(logging::Error) << "SSL Context loading error" << std::endl;
                 close();
             }
@@ -26,14 +26,22 @@ namespace spi
 
         ~ClientSession() override = default;
 
+        template <typename CoreCallback>
+        void onConnect(CoreCallback callback)
+        {
+            _connectCallback = callback;
+        }
+
         void connect()
         {
+            _log(logging::Info) << "Connecting ClientSession..." << std::endl;
             _sslConnection.asyncConnect(spi::cfg::address, spi::cfg::port, boost::bind(&ClientSession::handshakeSSL, this, net::ErrorPlaceholder));
         }
 
     private:
         void idontknow()
         {
+            _connectCallback(&_sslConnection);
         }
 
         void close()
@@ -58,19 +66,24 @@ namespace spi
 
             hello.serializeTypeInfo(buff);
             hello.serialize(buff);
+
+            _log(logging::Info) << "Authenticating ClientSession..." << std::endl;
             _sslConnection.asyncWriteSome(buff, boost::bind(&ClientSession::idontknow, this));
         }
 
         void handshakeSSL(const ErrorCode &errorCode)
         {
+            _log(logging::Info) << "Entering handshaking ClientSession..." << std::endl;
             if (errorCode)
             {
-                // SCHEDULE CONNECT IN 10MIN
+                _log(logging::Info) << "Error while handshaking ClientSession..." << std::endl;
                 return;
             }
+            _log(logging::Info) << "Handshaking ClientSession..." << std::endl;
             _sslConnection.asyncHandshake(net::SSLConnection::HandshakeType::Client, boost::bind(&ClientSession::auth, this, net::ErrorPlaceholder));
         }
 
+        std::function<void(net::SSLConnection *)> _connectCallback{};
 
         net::SSLContext &_ctx;
         net::IOManager &_ioManager;

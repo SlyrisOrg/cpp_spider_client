@@ -181,6 +181,7 @@ namespace spi
                 proto::KeyEvent keyEvent;
                 keyEvent.state = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN ? proto::KeyState::Down : proto::KeyState::Up;
 
+                keyEvent.timestamp = std::chrono::steady_clock::now();
                 if (toBinds.find(code) != toBinds.end()) {
                     keyEvent.code = toBinds.at(code);
                 } else
