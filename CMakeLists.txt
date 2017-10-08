@@ -43,16 +43,26 @@ set(HEADERS_SPIDER_LOGGING
         Project/Logging/LogHandle.hpp
         Project/Logging/AbstractLogHandle.hpp)
 
+set(HEADERS_SPIDER_UTILS
+        Project/Utils/ILoggable.hpp
+        Project/Utils/Serialization.hpp
+        Project/Utils/Stringification.hpp
+        )
+
+set(HEADERS_SPIDER_CORE
+        Project/Core/CommandableSession.hpp
+        Project/Core/ServerCommandSession.hpp
+        Project/Core/CSpiderCore.hpp
+        )
+
 set(HEADERS_SPIDER
         ${HEADERS_SPIDER_NETWORK}
         ${HEADERS_SPIDER_PROTOCOL}
         ${HEADERS_SPIDER_KEYLOGGER}
         ${HEADERS_SPIDER_LOGGING}
-        Project/CSpiderCore.hpp
-        Project/Configuration.hpp
-        Project/Utils/ILoggable.hpp
-        Project/Utils/Serialization.hpp
-        Project/Utils/Stringification.hpp)
+        ${HEADERS_SPIDER_UTILS}
+        ${HEADERS_SPIDER_CORE}
+        Project/Configuration.hpp)
 
 if (APPLE)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/OSXKeyLogger.hpp)

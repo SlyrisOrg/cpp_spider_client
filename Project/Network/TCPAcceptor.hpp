@@ -26,10 +26,10 @@ namespace spi::net
             _acc.listen(5);
         }
 
-        template <typename SockT, typename CallBackT>
-        void onAccept(SockT &sockT, CallBackT &&cb) noexcept
+        template <typename ConnectionT, typename CallBackT>
+        void onAccept(ConnectionT &conn, CallBackT &&cb) noexcept
         {
-            _acc.async_accept(sockT, std::forward<CallBackT>(cb));
+            _acc.async_accept(conn.rawSocket(), std::forward<CallBackT>(cb));
         }
 
     private:

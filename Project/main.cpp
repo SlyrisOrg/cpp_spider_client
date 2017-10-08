@@ -3,8 +3,7 @@
 //
 
 #include <iostream>
-#include "Configuration.hpp"
-#include "CSpiderCore.hpp"
+#include <Core/CSpiderCore.hpp>
 
 int main()
 {

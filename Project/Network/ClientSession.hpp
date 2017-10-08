@@ -55,20 +55,25 @@ namespace spi
 
         void auth(const ErrorCode &errorCode)
         {
-            proto::Hello hello;
+            if (!errorCode) {
 
-            hello.macAddress.get();
-            hello.md5 = utils::MD5(spi::cfg::filename);
-            hello.port = spi::cfg::portAcceptor;
-            hello.version = 1;
+                proto::Hello hello;
 
-            Buffer buff;
+                hello.macAddress.get();
+                hello.md5 = utils::MD5(spi::cfg::filename);
+                hello.port = spi::cfg::portAcceptor;
+                hello.version = 1;
 
-            hello.serializeTypeInfo(buff);
-            hello.serialize(buff);
+                Buffer buff;
 
-            _log(logging::Info) << "Authenticating ClientSession..." << std::endl;
-            _sslConnection.asyncWriteSome(buff, boost::bind(&ClientSession::idontknow, this));
+                hello.serializeTypeInfo(buff);
+                hello.serialize(buff);
+
+                _log(logging::Info) << "Authenticating ClientSession..." << std::endl;
+                _sslConnection.asyncWriteSome(buff, boost::bind(&ClientSession::idontknow, this));
+            } else {
+                _log(lg::Level::Warning) << "Error " << errorCode.message() << std::endl;
+            }
         }
 
         void handshakeSSL(const ErrorCode &errorCode)
@@ -88,7 +93,7 @@ namespace spi
         net::SSLContext &_ctx;
         net::IOManager &_ioManager;
         net::SSLConnection _sslConnection{_ioManager, _ctx};
-        logging::Logger _log{"ClientSession", logging::Level::Info};
+        logging::Logger _log{"server-session", logging::Level::Info};
     };
 }
 
