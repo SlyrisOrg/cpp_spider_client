@@ -7,7 +7,7 @@
 
 #include <memory>
 #include <unordered_map>
-#include <utils/Config.hpp>
+#include <config/Config.hpp>
 #include <linux/input.h>
 #include <boost/bind.hpp>
 #include <KeyLogger/KeyLogger.hpp>

@@ -8,7 +8,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/asio.hpp>
 #include <log/Logger.hpp>
-#include <utils/PlatformConfig.hpp>
+#include <config/PlatformConfig.hpp>
 
 #ifdef USING_UNIX
 # define FILENAME "spider_client"

@@ -2,11 +2,11 @@ cmake_minimum_required(VERSION 3.7)
 project(spider_client)
 
 ##START CONFIG CMAKE
-set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-utils/Module)
-set(CMAKE_CONFIG_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake-utils)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/vendor/core/cmake-utils/Module)
+set(CMAKE_CONFIG_PATH ${CMAKE_CURRENT_SOURCE_DIR}/vendor/core/cmake-utils)
 
 include(${CMAKE_CONFIG_PATH}/include.cmake)
-
+add_subdirectory(vendor/core)
 PROJECT_FOLDER(${PROJECT_NAME})
 STANDARD_COMPILATION_SETTINGS()
 BOOST_CONFIG_SPIDER_CLIENT()
@@ -82,7 +82,7 @@ if (APPLE)
     FIND_LIBRARY(APP_SERVICES_LIBRARY ApplicationServices)
     target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${APP_SERVICES_LIBRARY})
 else()
-    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(${PROJECT_NAME} PUBLIC core-utils core-log core-config core-net PRIVATE ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 endif()
 
-add_subdirectory(test)
+#add_subdirectory(test)

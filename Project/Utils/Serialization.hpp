@@ -132,7 +132,7 @@ namespace spi
         {
             auto macAddrBytes = Serializer::unserializeBytes(v, startPos, size);
             ::net::MACAddress ret;
-            ::net::MACAddress::RawMACAddress rawAddr;
+            ::net::MACAddress::RawMACAddress rawAddr{};
             std::copy(macAddrBytes.begin(), macAddrBytes.end(), rawAddr.begin());
             ret.setRaw(rawAddr);
             return ret;
