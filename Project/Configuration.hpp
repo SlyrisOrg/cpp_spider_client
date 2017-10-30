@@ -22,7 +22,6 @@ namespace utl = utils;
 namespace asio = boost::asio;
 namespace fs = boost::filesystem;
 
-
 namespace spi::cfg
 {
     struct Config
@@ -30,22 +29,10 @@ namespace spi::cfg
         unsigned short port;
         unsigned short portAcceptor;
         std::string address;
+        long retryTime;
     };
 
     constexpr const char *filename = FILENAME;
-
 }
-
-/*
-namespace spi
-{
-    class Configuration
-    {
-    public:
-        static void initialize()
-        {
-        };
-    };
-}*/
 
 #endif //SPIDER_CLIENT_CONFIGURATION_HPP

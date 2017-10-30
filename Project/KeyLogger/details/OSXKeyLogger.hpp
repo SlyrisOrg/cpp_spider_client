@@ -6,7 +6,7 @@
 #define SPIDER_CLIENT_OSXKEYLOGGER_HPP
 
 #include <memory>
-#include <utils/Config.hpp>
+#include <config/Config.hpp>
 #include <Network/IOManager.hpp>
 #include <KeyLogger/KeyLogger.hpp>
 #include "OSXEventListener.hpp"

@@ -27,7 +27,8 @@ set(HEADERS_SPIDER_NETWORK
         Project/Network/IOManager.hpp
         Project/Network/ClientSession.hpp
         Project/Network/SSLContext.hpp
-        Project/Network/SSLConnection.hpp)
+        Project/Network/SSLConnection.hpp
+        Project/Network/Timer.hpp)
 
 set(HEADERS_SPIDER_PROTOCOL
         Project/Protocol/CommandHandler.hpp
@@ -80,7 +81,7 @@ add_executable(${PROJECT_NAME} ${SOURCES_SPIDER} ${HEADERS_SPIDER})
 
 if (APPLE)
     FIND_LIBRARY(APP_SERVICES_LIBRARY ApplicationServices)
-    target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${APP_SERVICES_LIBRARY})
+    target_link_libraries(${PROJECT_NAME} PUBLIC core-utils core-log core-config core-net ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${APP_SERVICES_LIBRARY})
 else()
     target_link_libraries(${PROJECT_NAME} PUBLIC core-utils core-log core-config core-net PRIVATE ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 endif()
