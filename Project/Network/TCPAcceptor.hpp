@@ -15,15 +15,20 @@ namespace spi::net
     class TCPAcceptor
     {
     public:
-        TCPAcceptor(net::IOManager &io) noexcept : _acc(io.get())
+        explicit TCPAcceptor(net::IOManager &io) noexcept : _acc(io.get())
         {
         }
 
-        void bind(unsigned short port)
+        ErrorCode bind(unsigned short port)
         {
-            _acc.open(asio::ip::tcp::v4());
-            _acc.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
-            _acc.listen(5);
+            ErrorCode err;
+
+            _acc.open(asio::ip::tcp::v4(), err.get());
+            if (!err)
+                _acc.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port), err.get());
+            if (!err)
+                _acc.listen(5, err.get());
+            return err;
         }
 
         template <typename ConnectionT, typename CallBackT>

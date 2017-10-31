@@ -15,6 +15,8 @@ namespace spi
     public:
         using InternalT = boost::system::error_code;
 
+        ErrorCode() = default;
+
         ErrorCode(const InternalT &ec) noexcept : _ec(ec)
         {
         }
@@ -34,13 +36,18 @@ namespace spi
             return _ec;
         }
 
+        InternalT &get() noexcept
+        {
+            return _ec;
+        }
+
         std::string message() const noexcept
         {
             return _ec.message();
         }
 
     private:
-        const InternalT _ec;
+        InternalT _ec;
     };
 
     namespace net

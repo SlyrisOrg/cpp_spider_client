@@ -22,6 +22,11 @@ namespace spi::net
 
         ~Timer() noexcept = default;
 
+        void setExpiry(long seconds) noexcept
+        {
+            _timer.expires_from_now(boost::posix_time::seconds(seconds));
+        }
+
         template <typename CallbackT>
         void asyncWait(CallbackT &&cb) noexcept
         {

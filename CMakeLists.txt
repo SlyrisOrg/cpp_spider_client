@@ -11,7 +11,7 @@ PROJECT_FOLDER(${PROJECT_NAME})
 STANDARD_COMPILATION_SETTINGS()
 BOOST_CONFIG_SPIDER_CLIENT()
 OPENSSL_CONFIG()
-find_package (Threads)
+find_package(Threads)
 if (VERBOSE)
     PRINT_BUILD_TYPE()
     PRINT_FLAGS_INFO()
@@ -28,6 +28,8 @@ set(HEADERS_SPIDER_NETWORK
         Project/Network/ClientSession.hpp
         Project/Network/SSLContext.hpp
         Project/Network/SSLConnection.hpp
+        Project/Network/ErrorCode.hpp
+        Project/Network/TCPAcceptor.hpp
         Project/Network/Timer.hpp)
 
 set(HEADERS_SPIDER_PROTOCOL
@@ -67,13 +69,13 @@ set(HEADERS_SPIDER
 
 if (APPLE)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/OSXKeyLogger.hpp Project/KeyLogger/details/OSXEventListener.hpp Project/KeyLogger/details/OSXKeyMatchingTable.hpp)
-elseif(WIN32)
+elseif (WIN32)
     set(HEADERS_SPIDER ${HEADERS_SPIDER}
             Project/KeyLogger/details/WinKeyLogger.hpp
             )
-elseif(LINUX)
+elseif (LINUX)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/LinuxKeyLogger.hpp)
-endif()
+endif ()
 
 set(SOURCES_SPIDER Project/main.cpp)
 
@@ -82,8 +84,12 @@ add_executable(${PROJECT_NAME} ${SOURCES_SPIDER} ${HEADERS_SPIDER})
 if (APPLE)
     FIND_LIBRARY(APP_SERVICES_LIBRARY ApplicationServices)
     target_link_libraries(${PROJECT_NAME} PUBLIC core-utils core-log core-config core-net ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${APP_SERVICES_LIBRARY})
-else()
+else ()
     target_link_libraries(${PROJECT_NAME} PUBLIC core-utils core-log core-config core-net PRIVATE ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
-endif()
+endif ()
+
+if (WIN32)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE WIN32_LEAN_AND_MEAN)
+endif (WIN32)
 
 #add_subdirectory(test)

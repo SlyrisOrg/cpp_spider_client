@@ -7,9 +7,8 @@
 
 #include <utility>
 #include <memory>
+#include <log/Logger.hpp>
 #include <Protocol/Messages.hpp>
-
-#define KEYLOGGER_LOG "{'KeyLogger'}"
 
 namespace spi
 {
@@ -26,29 +25,29 @@ namespace spi
     public:
         void onMouseMoveEvent(MouseMoveCallback &&callback) noexcept
         {
-            _mouseMoveCallback = std::forward<MouseMoveCallback>(callback);
-            _log(lg::Debug) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseMove"
-                           << "'}" << utl::Reset << std::endl;
+            _mouseMoveCallback = std::move(callback);
+            _log(logging::Debug) << "Registered callback for " << utils::Green << "MouseMove"
+                                 << utils::Reset << " events" << std::endl;
         }
 
         void onMouseClickEvent(MouseClickCallback &&callback) noexcept
         {
-            _mouseClickCallback = std::forward<MouseClickCallback>(callback);
-            _log(lg::Debug) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseClick"
-                           << "'}" << utl::Reset << std::endl;
+            _mouseClickCallback = std::move(callback);
+            _log(logging::Debug) << "Registered callback for " << utils::Green << "MouseClick"
+                                 << utils::Reset << " events" << std::endl;
         }
 
         void onKeyboardEvent(KeyPressCallback &&callback) noexcept
         {
-            _keyPressCallback = std::forward<KeyPressCallback>(callback);
-            _log(lg::Debug) << KEYLOGGER_LOG << " -> register Callback of type " << utl::Green << "{'" << "MouseMove"
-                           << "'}" << utl::Reset << std::endl;
+            _keyPressCallback = std::move(callback);
+            _log(logging::Debug) << "Registered callback for " << utils::Green << "KeyboardEvent"
+                                 << utils::Reset << " events" << std::endl;
         }
 
-        virtual ~KeyLogger() = default;
+        virtual ~KeyLogger() noexcept = default;
 
     protected:
-        lg::Logger _log{"keylogger", lg::Level::Debug};
+        logging::Logger _log{"keylogger", logging::Level::Debug};
         MouseMoveCallback _mouseMoveCallback;
         MouseClickCallback _mouseClickCallback;
         KeyPressCallback _keyPressCallback;

@@ -7,23 +7,24 @@
 
 #include <boost/bind.hpp>
 #include <utils/NonCopyable.hpp>
+#include <log/Logger.hpp>
 #include <Configuration.hpp>
 #include <Protocol/Messages.hpp>
 #include <Network/Timer.hpp>
-#include "SSLConnection.hpp"
+#include <Network/SSLConnection.hpp>
 
 namespace spi
 {
     class ClientSession : utils::NonCopyable
     {
     public:
-        ClientSession(net::SSLContext &ctx, net::IOManager &service, cfg::Config &conf) :
+        ClientSession(net::SSLContext &ctx, net::IOManager &service, const cfg::Config &conf) :
             _ctx(ctx),
             _ioManager(service),
             _timer(_ioManager, conf.retryTime),
             _conf(conf)
         {
-            if (!_ctx.usePrivateKeyFile("key.pem") || !_ctx.useCertificateFile("cert.pem")) {
+            if (!_ctx.usePrivateKeyFile(conf.keyFile) || !_ctx.useCertificateFile(conf.certFile)) {
                 _log(logging::Error) << "SSL Context loading error" << std::endl;
                 close();
             }
@@ -39,27 +40,20 @@ namespace spi
 
         void connect()
         {
-            _log(logging::Info) << "Connecting ClientSession..." << std::endl;
             _sslConnection.asyncConnect(_conf.address, _conf.port,
-                                        boost::bind(&ClientSession::handshakeSSL, this, net::ErrorPlaceholder));
+                                        boost::bind(&ClientSession::__handleConnect, this, net::ErrorPlaceholder));
         }
 
     private:
-        void idontknow()
+        void close() noexcept
         {
-            _connectCallback(&_sslConnection);
-        }
-
-        void close()
-        {
+            _log(logging::Info) << "Disconnecting from server..." << std::endl;
             _sslConnection.rawSocket().close();
-            _log(logging::Info) << "Closing socket ..." << std::endl;
-            _log(logging::Info) << "Closing input filedescriptor ..." << std::endl;
+            _log(logging::Info) << "Stopping IOManager..." << std::flush;
             _ioManager.stop();
-            _log(logging::Info) << "Stopping IOService ..." << std::flush;
         }
 
-        void handler(const ErrorCode &error)
+        void __retryConnect(const ErrorCode &error)
         {
             if (!error) {
                 connect();
@@ -68,7 +62,25 @@ namespace spi
             }
         }
 
-        void auth(const ErrorCode &errorCode)
+        void __rescheduleConnection(long seconds) noexcept
+        {
+            _timer.setExpiry(seconds);
+            _timer.asyncWait(boost::bind(&ClientSession::__retryConnect, this, net::ErrorPlaceholder));
+        }
+
+        void __handleAuthentication(const ErrorCode &err)
+        {
+            if (!err) {
+                _log(logging::Info) << "Successfully authenticated against server" << std::endl;
+                _connectCallback(&_sslConnection);
+            } else {
+                _log(logging::Level::Warning) << "Unable to authenticate: retrying in "
+                                              << _conf.retryTime << " seconds" << std::endl;
+                __rescheduleConnection(_conf.retryTime);
+            }
+        }
+
+        void __handleHandshake(const ErrorCode &errorCode)
         {
             if (!errorCode) {
                 proto::Hello hello;
@@ -79,23 +91,27 @@ namespace spi
                 Buffer buff;
                 hello.serializeTypeInfo(buff);
                 hello.serialize(buff);
-                _log(logging::Info) << "Authenticating ClientSession..." << std::endl;
-                _sslConnection.asyncWriteSome(buff, boost::bind(&ClientSession::idontknow, this));
+                _sslConnection.asyncWriteSome(buff, boost::bind(&ClientSession::__handleAuthentication,
+                                                                this, net::ErrorPlaceholder));
             } else {
-
-                _log(lg::Level::Warning) << "Error " << errorCode.message() << std::endl;
+                _log(logging::Level::Warning) << "Unable to perform SSL handshake: retrying in "
+                                              << _conf.retryTime << " seconds" << std::endl;
+                __rescheduleConnection(_conf.retryTime);
             }
         }
 
-        void handshakeSSL(const ErrorCode &errorCode)
+        void __handleConnect(const ErrorCode &errorCode)
         {
             if (errorCode) {
-                _log(logging::Info) << "Error while connecting! Retrying in " << _conf.retryTime << std::endl;
-                _timer.asyncWait(boost::bind(&ClientSession::handler, this, net::ErrorPlaceholder));
+                _log(logging::Debug) << errorCode.message() << std::endl;
+                _log(logging::Warning) << "Unable to connect: retrying in "
+                                       << _conf.retryTime << " seconds" << std::endl;
+                __rescheduleConnection(_conf.retryTime);
             } else {
-                _log(logging::Info) << "Handshaking ClientSession..." << std::endl;
+                _log(logging::Info) << "Connected to server" << std::endl;
                 _sslConnection.asyncHandshake(net::SSLConnection::HandshakeType::Client,
-                                              boost::bind(&ClientSession::auth, this, net::ErrorPlaceholder));
+                                              boost::bind(&ClientSession::__handleHandshake,
+                                                          this, net::ErrorPlaceholder));
             }
         }
 

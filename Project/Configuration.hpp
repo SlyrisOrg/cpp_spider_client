@@ -5,9 +5,6 @@
 #ifndef SPIDER_CLIENT_CONFIGURATION_HPP
 #define SPIDER_CLIENT_CONFIGURATION_HPP
 
-#include <boost/filesystem.hpp>
-#include <boost/asio.hpp>
-#include <log/Logger.hpp>
 #include <config/PlatformConfig.hpp>
 
 #ifdef USING_UNIX
@@ -17,11 +14,6 @@
 # define FILENAME "spider_client.exe"
 #endif
 
-namespace lg = logging;
-namespace utl = utils;
-namespace asio = boost::asio;
-namespace fs = boost::filesystem;
-
 namespace spi::cfg
 {
     struct Config
@@ -29,6 +21,9 @@ namespace spi::cfg
         unsigned short port;
         unsigned short portAcceptor;
         std::string address;
+        std::string logDir;
+        std::string keyFile;
+        std::string certFile;
         long retryTime;
     };
 
