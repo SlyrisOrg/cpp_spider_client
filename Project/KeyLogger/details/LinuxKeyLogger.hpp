@@ -135,7 +135,7 @@ namespace spi::details
                 keyEvent.state = ie.value ? proto::KeyState::Down : proto::KeyState::Up;
                 keyEvent.timestamp = std::chrono::steady_clock::now();
                 if (toBinds.find(ie.code) != toBinds.end() && ie.value <= 2) {
-                    _log(logging::Debug) << " event : " << ie.code << " state = " << (keyEvent.state == proto::KeyState::Down ? "Down" : "Up") << " value = " << ie.value << std::endl;
+                    _log(logging::Debug) << " event : " << ie.code << " state = " << keyEvent.state.toString() << " value = " << ie.value << std::endl;
                     keyEvent.code = toBinds.at(ie.code);
                     if (!(keyEvent.state == proto::KeyState::Up && std::find(printable.begin(), printable.end(), ie.code) != printable.end()) &&
                         !(ie.value == 2 && std::find(printable.begin(), printable.end(), ie.code) == printable.end()))
