@@ -15,15 +15,22 @@ namespace spi
     class AbstractLogHandle : public utils::NonCopyable
     {
     public:
-        virtual ~AbstractLogHandle() noexcept
-        {
-        }
+        virtual ~AbstractLogHandle() noexcept = default;
 
-        virtual void appendEntry(const ILoggable &) = 0;
+        /** Add an entry to the log */
+        virtual void appendEntry(const ILoggable &l) = 0;
 
+        /** Flush potentially buffered data */
         virtual void flush() = 0;
 
-        virtual void setIOManager(net::IOManager &) = 0;
+        virtual void setRoot(const std::string &root) noexcept = 0;
+
+        virtual void setID(const std::string &id) noexcept = 0;
+
+        virtual void setIOManager(net::IOManager &mgr) noexcept = 0;
+
+        /** Setup the handle. After this call, it must be ready to receive entries */
+        virtual bool setup() noexcept = 0;
     };
 }
 

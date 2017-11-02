@@ -34,7 +34,7 @@ namespace spi
             _log(logging::Info) << "Shutting down..." << std::endl;
         }
 
-        bool setup()
+        bool setup() noexcept override
         {
             if (!fs::exists(_baseDir) && !fs::create_directories(_baseDir)) {
                 return false;
@@ -103,7 +103,13 @@ namespace spi
             _logWritten = 0;
         }
 
-        void setIOManager(net::IOManager &) override
+        void setRoot(const std::string &) noexcept override
+        {}
+
+        void setID(const std::string &) noexcept override
+        {}
+
+        void setIOManager(net::IOManager &) noexcept override
         {}
 
     private:
