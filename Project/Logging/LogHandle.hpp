@@ -93,7 +93,7 @@ namespace spi
             }
         }
 
-        void rotate() override
+        void rotate()
         {
             if (_out.is_open())
                 _out.close();
@@ -102,6 +102,9 @@ namespace spi
             _out.open(outPath.string());
             _logWritten = 0;
         }
+
+        void setIoManager(net::IOManager &) override
+        {}
 
     private:
         void __flushLocal()

@@ -8,6 +8,7 @@
 #include <string>
 #include <utils/NonCopyable.hpp>
 #include <Utils/ILoggable.hpp>
+#include <Network/IOManager.hpp>
 
 namespace spi
 {
@@ -20,9 +21,9 @@ namespace spi
 
         virtual void appendEntry(const ILoggable &) = 0;
 
-        virtual void rotate() = 0;
-
         virtual void flush() = 0;
+
+        virtual void setIOManager(net::IOManager &) = 0;
     };
 }
 
