@@ -103,7 +103,7 @@ namespace spi
             _logWritten = 0;
         }
 
-        void setIoManager(net::IOManager &) override
+        void setIOManager(net::IOManager &) override
         {}
 
     private:
