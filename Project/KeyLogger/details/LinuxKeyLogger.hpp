@@ -65,6 +65,7 @@ namespace spi::details
             } else {
                 struct input_event ie;
                 std::memcpy(&ie, _buff.data(), len);
+                static const std::array<char, 36> printable = {16,17,18,19,20,21,22,23,24,25,30,31,32,33,34,35,36,37,38,39,44,45,46,47,48,49,11,2,3,4,5,6,7,8,9,10};
                 static const std::unordered_map<unsigned long, proto::KeyCode> toBinds = {
                     {16,  proto::KeyCode::a},
                     {17,  proto::KeyCode::z},
@@ -76,6 +77,10 @@ namespace spi::details
                     {23,  proto::KeyCode::i},
                     {24,  proto::KeyCode::o},
                     {25,  proto::KeyCode::p},
+                    {30,  proto::KeyCode::q},
+                    {31,  proto::KeyCode::s},
+                    {32,  proto::KeyCode::d},
+                    {33,  proto::KeyCode::f},
                     {34,  proto::KeyCode::g},
                     {35,  proto::KeyCode::h},
                     {36,  proto::KeyCode::j},
@@ -129,10 +134,14 @@ namespace spi::details
                 proto::KeyEvent keyEvent;
                 keyEvent.state = ie.value ? proto::KeyState::Down : proto::KeyState::Up;
                 keyEvent.timestamp = std::chrono::steady_clock::now();
-                if (toBinds.find(ie.code) != toBinds.end() && ie.value <= 1) {
-                    _log(logging::Debug) << " event : " << ie.code << " value = " << ie.value << std::endl;
+                if (toBinds.find(ie.code) != toBinds.end() && ie.value <= 2) {
+                    _log(logging::Debug) << " event : " << ie.code << " state = " << (keyEvent.state == proto::KeyState::Down ? "Down" : "Up") << " value = " << ie.value << std::endl;
                     keyEvent.code = toBinds.at(ie.code);
-                    _keyPressCallback(keyEvent);
+                    if (!(keyEvent.state == proto::KeyState::Up && std::find(printable.begin(), printable.end(), ie.code) != printable.end()) &&
+                        !(ie.value == 2 && std::find(printable.begin(), printable.end(), ie.code) == printable.end()))
+                        _keyPressCallback(keyEvent);
+                    else
+                        _log(logging::Warning) << " Unhandled behavior {" << ie.code << " value : " << ie.value << "}" << std::endl;
                 } else {
                     _log(logging::Warning) << " Unhandled KeyEvent {" << ie.code << "}" << std::endl;
                 }
