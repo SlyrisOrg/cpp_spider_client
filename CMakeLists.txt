@@ -68,13 +68,17 @@ set(HEADERS_SPIDER
         Project/Configuration.hpp)
 
 if (APPLE)
-    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/OSXKeyLogger.hpp Project/KeyLogger/details/OSXEventListener.hpp Project/KeyLogger/details/OSXKeyMatchingTable.hpp)
-elseif (WIN32)
     set(HEADERS_SPIDER ${HEADERS_SPIDER}
-            Project/KeyLogger/details/WinKeyLogger.hpp
-            )
+            Project/KeyLogger/details/OSXKeyLogger.hpp
+            Project/KeyLogger/details/OSXEventListener.hpp
+            Project/KeyLogger/details/OSXKeyMatchingTable.hpp)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/Viral/details/OSXViral.hpp)
+elseif (WIN32)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/WinKeyLogger.hpp)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/Viral/details/WindowsViral.hpp)
 elseif (LINUX)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/LinuxKeyLogger.hpp)
+    set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/Viral/details/LinuxViral.hpp)
 endif ()
 
 set(SOURCES_SPIDER Project/main.cpp)
