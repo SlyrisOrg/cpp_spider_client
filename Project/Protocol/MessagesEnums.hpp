@@ -56,7 +56,41 @@ namespace spi::proto
          Fn, Home, Alt, Space, AltGr,
          Left, Right, Up, Down,
          PageDown, PageUp,
-         Backspace, Delete
+         End, Start,
+         Inser,
+         Backspace, Delete,
+
+         Enter,
+
+         AcuteE, GraveE,
+         CedillaC, GraveA,
+         GraveU,
+
+         Comma, Semicolon, Colon,
+
+         Exclamation, Interrogation, Dot,
+
+         Slash, Backslash,
+         Underscore, Pipe,
+
+         Selection, Ampersand,
+         Tilde, Sharp,
+         Dollar, Euro, Pound, Currency,
+         Caret, Trema, Arobase,
+
+         Quote, DoubleQuote,
+         Inferior, Superior,
+
+         OpeningParenthesis, ClosingParenthesis,
+         OpeningBracket, ClosingBracket,
+         OpeningSquareBracket, ClosingSquareBracket,
+
+         Plus, Dash,
+         Star, Modulo, Equal,
+
+         Mu,
+
+         Round
     );
 
     ENUM(KeyState, Up, Down);
