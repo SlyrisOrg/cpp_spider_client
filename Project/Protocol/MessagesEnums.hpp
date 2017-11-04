@@ -29,6 +29,10 @@ namespace spi::proto
          RScreenshot
     );
 
+#ifdef USING_MSVC
+#include "Generated.hpp"
+#else
+
     ENUM(KeyCode,
          a, b, c, d, e,
          f, g, h, i, j,
@@ -78,7 +82,7 @@ namespace spi::proto
          Dollar, Euro, Pound, Currency,
          Caret, Trema, Arobase,
 
-         Quote, DoubleQuote,
+         Quote, DoubleQuote, BackQuote,
          Inferior, Superior,
 
          OpeningParenthesis, ClosingParenthesis,
@@ -92,6 +96,7 @@ namespace spi::proto
 
          Round
     );
+#endif
 
     ENUM(KeyState, Up, Down);
 

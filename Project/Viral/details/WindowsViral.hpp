@@ -9,7 +9,7 @@
 #error Do not include this file directly
 #endif
 
-namespace details
+namespace spi::details
 {
     class ViralImpl
     {
