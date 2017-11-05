@@ -36,7 +36,18 @@ namespace spi::net
             asio::ip::tcp::resolver::query q(host, std::to_string(port));
             auto it = resolver.resolve(q);
 
-            asio::async_connect(_socket.lowest_layer(), it, cb);
+            asio::async_connect(_socket.lowest_layer(), it, std::forward<CallBackT>(cb));
+        }
+
+        ErrorCode connect(const std::string &host, unsigned short port) noexcept
+        {
+            asio::ip::tcp::resolver resolver(_socket.get_io_service());
+            asio::ip::tcp::resolver::query q(host, std::to_string(port));
+            auto it = resolver.resolve(q);
+            boost::system::error_code ec;
+
+            asio::connect(_socket.lowest_layer(), it, ec);
+            return ec;
         }
 
         template <typename CallBackT>
@@ -46,16 +57,36 @@ namespace spi::net
                                     std::forward<CallBackT>(cb));
         }
 
+        ErrorCode handshake(HandshakeType type) noexcept
+        {
+            boost::system::error_code ec;
+
+            _socket.handshake(static_cast<asio::ssl::stream_base::handshake_type>(type), ec);
+            return ec;
+        }
+
         template <typename BufferT, typename CallBackT>
-        void asyncReadSome(const BufferT &buff, CallBackT &&cb) noexcept
+        void asyncReadSome(BufferT buff, CallBackT &&cb) noexcept
         {
             _socket.async_read_some(boost::asio::buffer(buff.data(), buff.size()), std::forward<CallBackT>(cb));
+        }
+
+        template <typename BufferT>
+        size_t readSome(BufferT buff, ErrorCode &ec) noexcept
+        {
+            return _socket.read_some(boost::asio::buffer(buff.data(), buff.size()), ec.get());
         }
 
         template <typename BufferT, typename CallBackT>
         void asyncWriteSome(const BufferT &buff, CallBackT &&cb) noexcept
         {
             _socket.async_write_some(boost::asio::buffer(buff.data(), buff.size()), std::forward<CallBackT>(cb));
+        }
+
+        template <typename BufferT>
+        size_t writeSome(const BufferT &buff, ErrorCode &ec) noexcept
+        {
+            return _socket.write_some(boost::asio::buffer(buff.data(), buff.size()), ec.get());
         }
 
         Socket::lowest_layer_type &rawSocket() noexcept
@@ -66,6 +97,11 @@ namespace spi::net
         Socket &socket() noexcept
         {
             return _socket;
+        }
+
+        std::string getRemoteAddress() const noexcept
+        {
+            return _socket.lowest_layer().remote_endpoint().address().to_string();
         }
 
     private:

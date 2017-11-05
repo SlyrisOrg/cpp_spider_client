@@ -31,6 +31,11 @@ namespace spi::net
             return err;
         }
 
+        void close() noexcept
+        {
+            _acc.close();
+        }
+
         template <typename ConnectionT, typename CallBackT>
         void onAccept(ConnectionT &conn, CallBackT &&cb) noexcept
         {
