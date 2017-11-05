@@ -58,7 +58,6 @@ namespace spi
             _clientSession->onConnectFailure(boost::bind(&LogHandle::__onConnectionFailure, this));
             tryConnection();
             _timer = std::make_unique<net::Timer>(*_io, _conf.retryTime);
-            __scheduleFlush(_conf.retryTime);
             _log(logging::Info) << "Setup successfully" << std::endl;
             return true;
         }
@@ -91,6 +90,7 @@ namespace spi
             if (isConnectionValid) {
                 if (_buffer.size() > 0)
                     _clientSession->getConnection().asyncWriteSome(_buffer, boost::bind(&LogHandle::__handleWrite, this, net::ErrorPlaceholder));
+                __scheduleFlush(_conf.retryTime);
             } else {
                 if (_logWritten + _buffer.size() > _fileMax) {
                     rotate();
@@ -102,7 +102,6 @@ namespace spi
                     _out.flush();
                     _buffer.clear();
                 }
-                __scheduleFlush(_conf.retryTime);
             }
         }
 
@@ -214,6 +213,7 @@ namespace spi
             isConnectionValid = true;
             _log(logging::Info) << "Connected" << std::endl;
             __flushLocal();
+            __scheduleFlush(_conf.retryTime);
         }
 
         void __onConnectionFailure()
@@ -227,7 +227,15 @@ namespace spi
         void __scheduleFlush(long seconds) noexcept
         {
             _timer->setExpiry(seconds);
-            _timer->asyncWait(boost::bind(&LogHandle::flush, this));
+            _timer->asyncWait(boost::bind(&LogHandle::__handleFlush, this, net::ErrorPlaceholder));
+        }
+
+        void __handleFlush(const ErrorCode &err)
+        {
+            if (!err)
+                flush();
+            else
+                _log(logging::Warning) << "unexpected error on flushing timer" << std::endl;
         }
 
     private:
