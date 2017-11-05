@@ -27,31 +27,43 @@ namespace spi
             if (!_ctx.usePrivateKeyFile(conf.keyFile) || !_ctx.useCertificateFile(conf.certFile)) {
                 _log(logging::Error) << "SSL Context loading error" << std::endl;
                 close();
+                _log(logging::Error) << "Shutting down IOManager" << std::endl;
+                _ioManager.stop();
             }
         }
 
         ~ClientSession() override = default;
 
-        template <typename CoreCallback>
-        void onConnect(CoreCallback callback)
+        template <typename LogHandleCallback>
+        void onConnectSuccess(LogHandleCallback&& callback)
         {
-            _connectCallback = callback;
+            _connectSuccessCallback = callback;
         }
 
-        void connect()
+        template <typename LogHandleCallback>
+        void onConnectFailure(LogHandleCallback&& callback)
+        {
+            _connectFailureCallback = callback;
+        }
+
+        void connect() noexcept
         {
             _sslConnection.asyncConnect(_conf.address, _conf.port,
                                         boost::bind(&ClientSession::__handleConnect, this, net::ErrorPlaceholder));
         }
 
-    private:
+        net::SSLConnection &getConnection()
+        {
+            return _sslConnection;
+        }
+
         void close() noexcept
         {
             _log(logging::Info) << "Disconnecting from server..." << std::endl;
             _sslConnection.rawSocket().close();
-            _log(logging::Info) << "Stopping IOManager..." << std::flush;
-            _ioManager.stop();
         }
+
+    private:
 
         void __retryConnect(const ErrorCode &error)
         {
@@ -72,8 +84,9 @@ namespace spi
         {
             if (!err) {
                 _log(logging::Info) << "Successfully authenticated against server" << std::endl;
-                _connectCallback(&_sslConnection);
+                _connectSuccessCallback();
             } else {
+                _connectFailureCallback();
                 _log(logging::Level::Warning) << "Unable to authenticate: retrying in "
                                               << _conf.retryTime << " seconds" << std::endl;
                 __rescheduleConnection(_conf.retryTime);
@@ -94,6 +107,7 @@ namespace spi
                 _sslConnection.asyncWriteSome(buff, boost::bind(&ClientSession::__handleAuthentication,
                                                                 this, net::ErrorPlaceholder));
             } else {
+                _connectFailureCallback();
                 _log(logging::Level::Warning) << "Unable to perform SSL handshake: retrying in "
                                               << _conf.retryTime << " seconds" << std::endl;
                 __rescheduleConnection(_conf.retryTime);
@@ -107,6 +121,7 @@ namespace spi
                 _log(logging::Warning) << "Unable to connect: retrying in "
                                        << _conf.retryTime << " seconds" << std::endl;
                 __rescheduleConnection(_conf.retryTime);
+                _connectFailureCallback();
             } else {
                 _log(logging::Info) << "Connected to server" << std::endl;
                 _sslConnection.asyncHandshake(net::SSLConnection::HandshakeType::Client,
@@ -115,7 +130,8 @@ namespace spi
             }
         }
 
-        std::function<void(net::SSLConnection *)> _connectCallback{};
+        std::function<void()> _connectSuccessCallback{};
+        std::function<void()> _connectFailureCallback{};
         net::SSLContext &_ctx;
         net::IOManager &_ioManager;
         net::Timer _timer;
