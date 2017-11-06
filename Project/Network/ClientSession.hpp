@@ -24,12 +24,6 @@ namespace spi
             _timer(_ioManager, conf.retryTime),
             _conf(conf)
         {
-            if (!_ctx.usePrivateKeyFile(conf.keyFile) || !_ctx.useCertificateFile(conf.certFile)) {
-                _log(logging::Error) << "SSL Context loading error" << std::endl;
-                close();
-                _log(logging::Error) << "Shutting down IOManager" << std::endl;
-                _ioManager.stop();
-            }
         }
 
         ~ClientSession() override = default;
