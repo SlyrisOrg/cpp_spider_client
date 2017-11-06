@@ -707,6 +707,54 @@ namespace spi::proto
                                          " }");
         }
     };
+
+    struct WindowChanged : public ILoggable
+    {
+        std::string windowName;
+
+        static constexpr const size_t SerializedSize = 4;
+
+        WindowChanged() = default;
+
+        WindowChanged(const Buffer &buff)
+        {
+            windowName.resize(Serializer::unserializeInt(buff, 0));
+        }
+
+        void serialize(Buffer &out) const noexcept override
+        {
+            Buffer buff;
+
+            buff.reserve(windowName.size());
+            buff.insert(buff.begin(), windowName.begin(), windowName.end());
+            out.reserve(SerializedSize + windowName.size());
+            Serializer::serializeBuff(out, buff);
+        }
+
+        void serializeTypeInfo(Buffer &out) const noexcept override
+        {
+            out.reserve(out.size() + MessageHeaderSize);
+            Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::WindowChange));
+        }
+
+        std::string stringify() const noexcept override
+        {
+            std::stringstream ss;
+
+            ss << "[WindowChange] ";
+            ss << "windowName: " << windowName << ", ";
+            return ss.str();
+        }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::WindowChange)),
+                                         ", ",
+                                         "\"title\": ", JSON::quote(windowName),
+                                         " }");
+        }
+    };
 }
 
 #endif //SPIDER_PROTO_MESSAGES_HPP

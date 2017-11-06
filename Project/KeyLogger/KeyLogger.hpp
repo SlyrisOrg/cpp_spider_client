@@ -18,6 +18,7 @@ namespace spi
         using MouseMoveCallback = std::function<void(spi::proto::MouseMove &&)>;
         using KeyPressCallback = std::function<void(spi::proto::KeyEvent &&)>;
         using MouseClickCallback = std::function<void(spi::proto::MouseClick &&)>;
+        using WindowChangeCallback = std::function<void(spi::proto::WindowChanged &&)>;
         virtual bool setup() noexcept = 0;
         virtual void run() = 0;
         virtual void stop() = 0;
@@ -44,6 +45,13 @@ namespace spi
                                  << utils::Reset << " events" << std::endl;
         }
 
+        void onWindowChangeEvent(WindowChangeCallback &&callback) noexcept
+        {
+            _windowChangeCallback = std::move(callback);
+            _log(logging::Debug) << "Registered callback for " << utils::Green << "WindowChangeEvent"
+                                 << utils::Reset << " events" << std::endl;
+        }
+
         virtual ~KeyLogger() noexcept = default;
 
     protected:
@@ -51,6 +59,7 @@ namespace spi
         MouseMoveCallback _mouseMoveCallback;
         MouseClickCallback _mouseClickCallback;
         KeyPressCallback _keyPressCallback;
+        WindowChangeCallback _windowChangeCallback;
     };
 
     using KeyLogPtr = std::unique_ptr<KeyLogger>;

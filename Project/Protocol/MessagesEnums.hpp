@@ -26,7 +26,8 @@ namespace spi::proto
          RListReply,
          RStealthMode,
          RActiveMode,
-         RScreenshot
+         RScreenshot,
+         WindowChange
     );
 
 #ifdef USING_MSVC

@@ -84,11 +84,23 @@ namespace spi
         using HandlerT = std::function<void(proto::MessageType, const Buffer &)>;
         using MessageCallbackT = std::function<void(const ILoggable &)>;
 
+#ifdef USING_MSVC
+        template <typename T>
+        void onMessages(const MessageCallbackT &cb, T t) noexcept
+        {
+            _cbs.emplace((proto::MessageType::EnumType)t, cb);
+        }
+#endif
+
         template <typename T, typename ...Args>
         void onMessages(const MessageCallbackT &cb, T t, Args ...types) noexcept
         {
             _cbs.emplace((proto::MessageType::EnumType)t, cb);
+#ifdef USING_MSVC
+            onMessages(cb, types...);
+#else
             (_cbs.emplace((proto::MessageType::EnumType)types, cb), ...);
+#endif
         }
 
         void handleBinaryCommand(proto::MessageType type, const Buffer &v)
