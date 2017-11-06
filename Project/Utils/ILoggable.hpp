@@ -7,10 +7,11 @@
 
 #include <Utils/Serialization.hpp>
 #include <Utils/Stringification.hpp>
+#include <Utils/JSONification.hpp>
 
 namespace spi
 {
-    struct ILoggable : public ISerializable, public IStringifiable
+    struct ILoggable : public ISerializable, public IStringifiable, public IJSONifiable
     {
     };
 }

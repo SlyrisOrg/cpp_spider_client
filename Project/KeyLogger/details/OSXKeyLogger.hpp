@@ -24,7 +24,7 @@ namespace spi
 
         ~OSXKeyLogger() override = default;
 
-        void setup() override
+        bool setup() noexcept override
         {
             _log(lg::Info) << OSX_LOG << " successfully initialized." << std::endl;
 
@@ -118,6 +118,7 @@ namespace spi
 
                                         _keyPressCallback(std::move(keyEvent));
                                     });
+            return true;
         }
 
         void run() override

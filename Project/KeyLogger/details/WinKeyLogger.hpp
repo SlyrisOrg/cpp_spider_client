@@ -34,8 +34,9 @@ namespace spi
 
         ~WinKeyLogger() override = default;
 
-        void setup() noexcept override
+        bool setup() noexcept override
         {
+            return true;
         }
 
         static LRESULT CALLBACK MouseHookProc(int code, WPARAM wParam, LPARAM lParam) noexcept

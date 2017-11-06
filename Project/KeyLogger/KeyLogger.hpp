@@ -18,7 +18,7 @@ namespace spi
         using MouseMoveCallback = std::function<void(spi::proto::MouseMove &&)>;
         using KeyPressCallback = std::function<void(spi::proto::KeyEvent &&)>;
         using MouseClickCallback = std::function<void(spi::proto::MouseClick &&)>;
-        virtual void setup() = 0;
+        virtual bool setup() noexcept = 0;
         virtual void run() = 0;
         virtual void stop() = 0;
 
