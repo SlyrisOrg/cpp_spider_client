@@ -36,7 +36,6 @@ namespace spi
         ~CSpiderCore() noexcept
         {
             _log(logging::Info) << "Shutting down" << std::endl;
-            _keyLogger->stop();
             delete _sess;
         }
 

