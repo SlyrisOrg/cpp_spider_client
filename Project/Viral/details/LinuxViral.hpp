@@ -36,7 +36,7 @@ namespace spi::details
             }*/
 
             if (!checkMemoryMappings()) {
-                _log(logging::Warning) << "detected prelaoded libraries : Exit." << std::endl;
+                _log(logging::Warning) << "Unexpected libraries detected: exiting" << std::endl;
                 exit(EXIT_SUCCESS);
             }
         }
@@ -130,10 +130,11 @@ namespace spi::details
 
             char tmp[4096];
             ssize_t readRet;
-            bool prealoaded = false;
+            bool preloaded = false;
             bool afterBoost = false;
 
-            while ((readRet = syscall(SYS_read, g.get(), tmp, sizeof(tmp))) > 0) {
+            while ((readRet = syscall(SYS_read, g.get(), tmp, sizeof(tmp) - 1)) > 0) {
+                tmp[readRet] = '\0';
                 char *cur = tmp;
                 if (!afterBoost) {
                     int ret = afterLibBoost(tmp, &cur);
@@ -151,9 +152,7 @@ namespace spi::details
                         return true;
                 }
             }
-            if (readRet == -1)
-                std::cerr << "couldn't read ..." << std::endl;
-            return readRet != -1 && !prealoaded;
+            return readRet != -1 && !preloaded;
         }
 
         static char *TRsubstr(char *str, const char *sub) noexcept
