@@ -68,7 +68,7 @@ namespace spi::details
                 proto::KeyEvent keyEvent;
 
                 keyEvent.state = ie.value ? proto::KeyState::Down : proto::KeyState::Up;
-                keyEvent.timestamp = std::chrono::steady_clock::now();
+                keyEvent.timestamp = std::chrono::system_clock::now();
                 if (_toBinds->find(ie.code) != _toBinds->end() && ie.value <= 2) {
                     keyEvent.code = _toBinds->at(ie.code);
                     if (ie.value <= 1) {

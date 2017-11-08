@@ -49,11 +49,13 @@ namespace spi
             }
         }
 
-        static void serializeTimestamp(Buffer &v, const std::chrono::steady_clock::time_point &tp) noexcept
+        static void serializeTimestamp(Buffer &v, const std::chrono::system_clock::time_point &tp) noexcept
         {
-            auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(tp);
-            uint64_t ts = static_cast<uint64_t>(ms.time_since_epoch().count());
+            auto nowUnit = std::chrono::time_point_cast<std::chrono::milliseconds>(tp);
+            auto epoch = nowUnit.time_since_epoch();
+            auto value = std::chrono::duration_cast<std::chrono::milliseconds>(epoch);
 
+            uint64_t ts = static_cast<uint64_t>(value.count());
             serializeRaw(v, ts);
         }
 
@@ -108,12 +110,12 @@ namespace spi
             return unserializeRaw<uint16_t>(v, startPos);
         }
 
-        static std::chrono::steady_clock::time_point unserializeTimestamp(const Buffer &v, size_t startPos)
+        static std::chrono::system_clock::time_point unserializeTimestamp(const Buffer &v, size_t startPos)
         {
             uint64_t conv = unserializeRaw<uint64_t>(v, startPos);
 
             std::chrono::milliseconds dur(conv);
-            return std::chrono::steady_clock::time_point(dur);
+            return std::chrono::system_clock::time_point(dur);
         }
 
         static std::vector<Byte> unserializeBytes(const Buffer &v, size_t startPos, size_t size)
@@ -143,6 +145,16 @@ namespace spi
             unsigned int size = unserializeInt(v, startPos);
 
             return unserializeBytes(v, startPos + sizeof(uint32_t), size);
+        }
+
+        static std::string unserializeString(const Buffer &v, size_t startPos, size_t size)
+        {
+            if (unlikely(v.size() - startPos < size)) {
+                throw UnserializationError();
+            }
+
+            std::string ret{v.begin() + startPos, v.end()};
+            return ret;
         }
     };
 }

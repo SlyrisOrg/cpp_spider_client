@@ -200,7 +200,7 @@ namespace spi::proto
 
     struct KeyEvent : public ILoggable
     {
-        std::chrono::steady_clock::time_point timestamp;
+        std::chrono::system_clock::time_point timestamp;
         KeyCode code;
         KeyState state;
 
@@ -236,7 +236,10 @@ namespace spi::proto
             std::stringstream ss;
 
             ss << "[KeyEvent] ";
-            ss << "timestamp: " << timestamp.time_since_epoch().count() << ", ";
+            auto ms = std::chrono::time_point_cast<std::chrono::milliseconds>(timestamp);
+            auto epoch = ms.time_since_epoch();
+            uint64_t ts = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(epoch).count());
+            ss << "timestamp: " << ts << ", ";
             ss << "code: " << code.toString() << ", ";
             ss << "state: " << state.toString();
             return ss.str();
@@ -255,7 +258,7 @@ namespace spi::proto
 
     struct MouseClick : public ILoggable
     {
-        std::chrono::steady_clock::time_point timestamp;
+        std::chrono::system_clock::time_point timestamp;
         uint32_t x;
         uint32_t y;
         KeyState state;
@@ -321,7 +324,7 @@ namespace spi::proto
 
     struct MouseMove : public ILoggable
     {
-        std::chrono::steady_clock::time_point timestamp;
+        std::chrono::system_clock::time_point timestamp;
         uint32_t x;
         uint32_t y;
 
@@ -742,7 +745,7 @@ namespace spi::proto
             std::stringstream ss;
 
             ss << "[WindowChange] ";
-            ss << "windowName: " << windowName << ", ";
+            ss << "windowName: " << windowName;
             return ss.str();
         }
 
