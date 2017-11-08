@@ -26,11 +26,10 @@ namespace spi
     {
     public:
 
-        LogHandle(cfg::Config &conf, net::SSLContext &ctx) noexcept : _conf(conf),
-                                                                      _ctx(ctx),
-                                                                      _baseDir(fs::temp_directory_path() / _conf.logDir)
-
-
+        LogHandle(const cfg::Config &conf, net::SSLContext &ctx) noexcept :
+            _conf(conf),
+            _ctx(ctx),
+            _baseDir(fs::temp_directory_path() / _conf.logDir)
         {
         }
 
@@ -43,7 +42,7 @@ namespace spi
 
         bool setup() noexcept override
         {
-            if (_io == nullptr){
+            if (_io == nullptr) {
                 _log(logging::Error) << "No IOManager set" << std::endl;
                 _log(logging::Error) << "Setup Failed" << std::endl;
                 return false;
@@ -89,7 +88,8 @@ namespace spi
             _log(logging::Info) << "Flushing" << std::endl;
             if (isConnectionValid) {
                 if (_buffer.size() > 0)
-                    _clientSession->getConnection().asyncWriteSome(_buffer, boost::bind(&LogHandle::__handleWrite, this, net::ErrorPlaceholder));
+                    _clientSession->getConnection().asyncWriteSome(_buffer, boost::bind(&LogHandle::__handleWrite,
+                                                                                        this, net::ErrorPlaceholder));
                 __scheduleFlush(_conf.retryTime);
             } else {
                 if (_logWritten + _buffer.size() > _fileMax) {
@@ -97,8 +97,7 @@ namespace spi
                 }
                 if (_buffer.size() > 0) {
                     _logWritten += _buffer.size();
-                    std::string str(_buffer.begin(), _buffer.end());
-                    _out << str << std::endl;
+                    _out.write(reinterpret_cast<const char *>(_buffer.data()), _buffer.size());
                     _out.flush();
                     _buffer.clear();
                 }
@@ -110,16 +109,18 @@ namespace spi
             if (_out.is_open())
                 _out.close();
             _fileNb += 1;
-            fs::path outPath = (_baseDir / std::to_string(_fileNb)).replace_extension("spi");
-            _out.open(outPath.string());
+            fs::path outPath = std::move((_baseDir / std::to_string(_fileNb)).replace_extension("spi"));
+            _out.open(outPath.string(), std::ios_base::binary);
             _logWritten = 0;
         }
 
         void setRoot([[maybe_unused]] const std::string &) noexcept override
-        {}
+        {
+        }
 
         void setID([[maybe_unused]] const std::string &) noexcept override
-        {}
+        {
+        }
 
         // need to be set before calling the setup
         void setIOManager(net::IOManager &ioManager) noexcept override
@@ -130,60 +131,60 @@ namespace spi
     private:
         void __flushLocal()
         {
-            unsigned long max = 0;
-            unsigned long min = 1000000;
+            std::vector<fs::path> files;
             std::vector<char> socketFlusher;
             std::ifstream in;
 
             socketFlusher.resize(_fileMax);
             fs::directory_iterator end;
             for (fs::directory_iterator it(_baseDir); it != end; ++it) {
-                try {
-                    auto n = std::stoul(it->path().stem().string());
-                    if (max <= n)
-                        max = n;
-                    if (min > n)
-                        min = n;
-                } catch (const std::exception &e) {
-                }
-            }
-            try {
-                for (unsigned long i = min; i <= max; i++) {
-                    if (!isConnectionValid)
-                        break;
-                    fs::path path = (_baseDir / std::to_string(i)).replace_extension("spi");
-                    if (fs::exists(path) && fs::is_regular_file(path)) {
-                        uintmax_t fileSize = fs::file_size(path);
-                        if (fileSize <= 0) {
-                            std::remove(path.string().c_str());
-                            continue;
-                        }
-                        in.open(path.string());
-                        if (!in.eof() && in.good()) {
-                            in.seekg(0, std::ios_base::end);
-                            if (_fileMax < static_cast<unsigned long>(fileSize)) // should normally never happen because the buffer is suposely limited to _fileMax
-                                socketFlusher.resize(static_cast<unsigned long>(fileSize));
-                            in.seekg(0, std::ios_base::beg);
-                            in.read(socketFlusher.data(), fileSize);
-                        }
-                        in.close();
-                        _clientSession->getConnection().socket().write_some(boost::asio::buffer(socketFlusher.data(), socketFlusher.size()));
-                        socketFlusher.clear();
-                        std::remove(path.string().c_str());
+                if (fs::exists(it->path()) && fs::is_regular_file(it->path())
+                    && it->path().extension().string() == ".spi") {
+                    try {
+                        auto n [[maybe_unused]] = std::stoul(it->path().stem().string());
+                        files.push_back(it->path());
+                    } catch (const std::exception &e) {
                     }
                 }
-            } catch (std::exception &e) {
-                _log(logging::Error) << e.what() << std::endl;
             }
+            std::sort(files.begin(), files.end());
+
+            for (const auto &path : files) {
+                if (!isConnectionValid)
+                    break;
+                try {
+                    if (fs::exists(path) && fs::is_regular_file(path)) {
+                        in.open(path.string(), std::ios_base::binary | std::ios_base::ate);
+                        if (in.good()) {
+                            auto pos = in.tellg();
+                            if (_fileMax < static_cast<unsigned long>(pos)) {
+                                // should normally never happen because the buffer is supposedly limited to _fileMax
+                                socketFlusher.resize(static_cast<unsigned long>(pos));
+                            }
+                            in.seekg(0, std::ios_base::beg);
+                            in.read(socketFlusher.data(), pos);
+                            in.close();
+                            ErrorCode ec;
+                            _clientSession->getConnection().writeSome(net::BufferView(socketFlusher.data(),
+                                                                                      static_cast<size_t>(pos)), ec);
+                            socketFlusher.clear();
+                        }
+                        std::remove(path.string().c_str());
+                    }
+                } catch (const std::exception &e) {
+                    _log(logging::Warning) << "Unable to flush " << path << ": " << e.what() << std::endl;
+                }
+            }
+            _log(logging::Debug) << "Flushed " << files.size() << " local files" << std::endl;
         }
 
-        void __handleWrite(const ErrorCode &error)
+        void __handleWrite(const ErrorCode &err)
         {
-            if (!error) {
+            if (!err) {
                 _log(logging::Debug) << "Data successfully sent to server" << std::endl;
                 _buffer.clear();
             } else {
-                _log(logging::Warning) << "Unable to write on server's socket : " << error.message() << std::endl;
+                _log(logging::Warning) << "Unable to send data to server: " << err.message() << std::endl;
                 disconnect();
                 tryConnection();
             }
@@ -235,7 +236,7 @@ namespace spi
             if (!err)
                 flush();
             else
-                _log(logging::Warning) << "unexpected error on flushing timer" << std::endl;
+                _log(logging::Warning) << "Unable to schedule an upcoming flush: " << err.message() << std::endl;
         }
 
     private:
