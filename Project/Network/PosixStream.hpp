@@ -11,7 +11,6 @@
 #include <boost/asio/streambuf.hpp>
 #include <Network/IOManager.hpp>
 
-
 namespace spi::net
 {
     class PosixStream
@@ -42,6 +41,11 @@ namespace spi::net
         void close() noexcept
         {
             _input.close();
+        }
+
+        void cancel() noexcept
+        {
+            _input.cancel();
         }
 
     private:

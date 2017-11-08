@@ -12,7 +12,8 @@ namespace spi
     class ServerCommandSession : public CommandableSession
     {
     public:
-        ServerCommandSession(net::IOManager &io, net::SSLContext &ctx) : CommandableSession(io, ctx, "server-cmd")
+        ServerCommandSession(net::IOManager &io, net::SSLContext &ctx, Viral &v) :
+            CommandableSession(io, ctx, "server-cmd"), _viral(v)
         {
             _cmdHandler.onMessages(boost::bind(&ServerCommandSession::__handleStealthMode, this, _1),
                                    proto::MessageType::StealthMode);
@@ -31,25 +32,20 @@ namespace spi
                            boost::bind(&ServerCommandSession::handleHandshake, this, net::ErrorPlaceholder));
         }
 
-        void setup(Viral *viral) noexcept
-        {
-            _viral = viral;
-        }
-
     private:
         void __handleStealthMode([[maybe_unused]] const ILoggable &s)
         {
             _log(logging::Level::Debug) << "Got stealth mode" << std::endl;
-            _viral->hide();
+            _viral.hide();
         }
 
         void __handleActiveMode([[maybe_unused]] const ILoggable &s)
         {
             _log(logging::Level::Debug) << "Got Active mode" << std::endl;
-            _viral->show();
+            _viral.show();
         }
 
-        Viral *_viral{nullptr};
+        Viral &_viral;
     };
 }
 

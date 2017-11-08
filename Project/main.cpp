@@ -60,7 +60,8 @@ int main(int ac, char **av)
 
     try {
         spi::CSpiderCore core(conf);
-
+        if (!core.setup())
+            return 1;
         core.run();
     }
     catch (const std::exception &error) {

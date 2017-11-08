@@ -14,8 +14,9 @@ namespace spi::details
     class ViralImpl
     {
     protected:
-        void antiTrace() noexcept
+        bool antiPreload() noexcept
         {
+            return true;
         }
     };
 }

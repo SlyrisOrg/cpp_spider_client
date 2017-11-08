@@ -18,8 +18,8 @@ namespace spi::details
     class ViralImpl
     {
     protected:
-        void antiTrace() noexcept
-        {
+//        void antiTrace() noexcept
+//        {
             /**
              * Most debugging tools use fork() + ptrace(PTRACE_TRACEME) + execve().
              * On Linux, a program can only ask to be traced once, so if the following call
@@ -28,18 +28,22 @@ namespace spi::details
              * as if a SIGTRAP was caught, after receiving SIGINT
              * and sending SIGCONT don't solve the problem ¯\_(ツ)_/¯
              */
+//            if ((ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == -1) ||
+//                ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == 0) {
+//                std::cout << "ALLEZ CIAO" << std::endl;
+//                exit(EXIT_SUCCESS);
+//            }
+//        }
 
-            /*if ((ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == -1) ||
-                ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == 0) {
-                std::cout << "ALLEZ CIAO" << std::endl;
-                exit(EXIT_SUCCESS);
-            }*/
-
+        bool antiPreload() noexcept
+        {
             if (!checkMemoryMappings()) {
                 _log(logging::Warning) << "Unexpected libraries detected: exiting" << std::endl;
-                exit(EXIT_SUCCESS);
+                return false;
             }
+            return true;
         }
+
     private:
         logging::Logger _log{"linux-spider-viral", logging::Level::Debug};
 
@@ -62,11 +66,11 @@ namespace spi::details
 #elif __amd64__
             __asm__ (
             "mov $2, %%rax;" // Open syscall number
-            "mov %1, %%rdi;" // Address of our string
-            "mov %2, %%rsi;" // Open mode
-            "mov $0, %%rdx;" // No create mode
-            "syscall;"       // Straight to ring0
-            "mov %%eax, %0;" // Returned file descriptor
+                "mov %1, %%rdi;" // Address of our string
+                "mov %2, %%rsi;" // Open mode
+                "mov $0, %%rdx;" // No create mode
+                "syscall;"       // Straight to ring0
+                "mov %%eax, %0;" // Returned file descriptor
             :"=r" (fd)
             :"m" (path), "m" (oflag)
             :"rax", "rdi", "rsi", "rdx"
@@ -79,8 +83,7 @@ namespace spi::details
         static ssize_t syscall_read(char *buffer, ssize_t buffer_size, int fd) noexcept
         {
             ssize_t i;
-            for(i = 0; i < buffer_size - 1; i++)
-            {
+            for (i = 0; i < buffer_size - 1; i++) {
                 size_t nbytes;
 #ifdef __i386__
                 __asm__ (
@@ -97,20 +100,19 @@ namespace spi::details
 #elif __amd64__
                 __asm__ (
                 "mov $0, %%rax;" // Read syscall number
-                "mov %1, %%rdi;" // File descriptor
-                "mov %2, %%rsi;" // Address of our buffer
-                "mov $1, %%rdx;" // Read 1 byte
-                "syscall;"       // Straight to ring0
-                "mov %%rax, %0;" // Returned read byte number
+                    "mov %1, %%rdi;" // File descriptor
+                    "mov %2, %%rsi;" // Address of our buffer
+                    "mov $1, %%rdx;" // Read 1 byte
+                    "syscall;"       // Straight to ring0
+                    "mov %%rax, %0;" // Returned read byte number
                 :"=r" (nbytes)
                 :"m" (fd), "r" (&(buffer[i]))
                 :"rax", "rdi", "rsi", "rdx"
                 );
 #endif
-                if(nbytes != 1)
+                if (nbytes != 1)
                     return -1;
-                if(buffer[i] == '\n')
-                {
+                if (buffer[i] == '\n') {
                     i++;
                     break;
                 }

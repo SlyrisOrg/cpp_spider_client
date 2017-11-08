@@ -30,6 +30,11 @@ namespace spi::details
             _buff.resize(sizeof(input_event));
         }
 
+        void stop()
+        {
+            _stream.cancel();
+        }
+
         void asyncRead()
         {
             _nbReadBytes = 0;
@@ -57,6 +62,7 @@ namespace spi::details
         {
             if (err) {
                 _log(logging::Warning) << "couldn't read key input file " << err.message() << std::endl;
+                return;
             }
 
             _nbReadBytes += len;
@@ -380,7 +386,7 @@ namespace spi
     class LinuxKeyLogger : public KeyLogger
     {
     public:
-        explicit LinuxKeyLogger(net::IOManager &service) : _service(service)
+        explicit LinuxKeyLogger(net::IOManager &service) noexcept : _service(service)
         {
             _buff.resize(sizeof(input_event));
 
@@ -388,9 +394,10 @@ namespace spi
             // and construct the vectors of files to watch
         }
 
-        ~LinuxKeyLogger() override
+        ~LinuxKeyLogger() noexcept override
         {
             _log(logging::Info) << "Shutting down" << std::endl;
+            stop();
         }
 
         bool setup() noexcept override
@@ -414,16 +421,30 @@ namespace spi
 
         void run() override
         {
-            _log(logging::Info) << "Starting" << std::endl;
+            if (!_running) {
+                _log(logging::Info) << "Starting" << std::endl;
 
-            for (auto &cur : _keyInputStream) {
-                cur.asyncRead();
+                for (auto &cur : _keyInputStream) {
+                    cur.asyncRead();
+                }
+                _running = true;
             }
         }
 
         void stop() override
         {
-            _log(logging::Info) << "Stopping" << std::endl;
+            if (_running) {
+                _log(logging::Info) << "Stopping" << std::endl;
+
+                for (auto &cur : _keyInputStream) {
+                    cur.stop();
+                }
+                _running = false;
+            }
+        }
+
+        void clear() noexcept
+        {
             _keyInputStream.clear();
             _mouseInputStream.clear();
         }
@@ -445,6 +466,7 @@ namespace spi
             _mouseClickCallback(std::move(ev));
         }
 
+        bool _running{false};
         // only works with tek pc, need to be constructed out of
         // the parsing of /proc/bus/input/devices
         std::vector<char> _buff;
