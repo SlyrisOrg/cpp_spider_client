@@ -38,7 +38,7 @@ namespace spi
 
                                         mouseMove.x = location.x;
                                         mouseMove.y = location.y;
-                                        mouseMove.timestamp = std::chrono::steady_clock::now();
+                                        mouseMove.timestamp = std::chrono::system_clock::now();
 
                                         _mouseMoveCallback(std::move(mouseMove));
             });
@@ -56,7 +56,7 @@ namespace spi
 
                                          mouseClick.x = location.x;
                                          mouseClick.y = location.y;
-                                         mouseClick.timestamp = std::chrono::steady_clock::now();
+                                         mouseClick.timestamp = std::chrono::system_clock::now();
 
                                          switch (type) {
                                              case kCGEventLeftMouseDown:

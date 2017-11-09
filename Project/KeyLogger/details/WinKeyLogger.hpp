@@ -55,7 +55,7 @@ namespace spi
 
                     mouseMove.x = GET_X_LPARAM(lParam);
                     mouseMove.y = GET_Y_LPARAM(lParam);
-                    mouseMove.timestamp = std::chrono::steady_clock::now();
+                    mouseMove.timestamp = std::chrono::system_clock::now();
 
                     std::lock_guard<std::mutex> lock_guard(_bufferMutex);
                     _circularBuffer.push_back({mouseMove});
@@ -71,7 +71,7 @@ namespace spi
 
                     mouseClick.x = GET_X_LPARAM(lParam);
                     mouseClick.y = GET_Y_LPARAM(lParam);
-                    mouseClick.timestamp = std::chrono::steady_clock::now();
+                    mouseClick.timestamp = std::chrono::system_clock::now();
                     switch (wParam) {
                         case WM_MBUTTONUP:
                         case WM_LBUTTONUP:
@@ -264,7 +264,7 @@ namespace spi
                 keyEvent.state =
                     wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN ? proto::KeyState::Down : proto::KeyState::Up;
 
-                keyEvent.timestamp = std::chrono::steady_clock::now();
+                keyEvent.timestamp = std::chrono::system_clock::now();
                 if (_activeKeys[proto::KeyCode::Shift] == proto::KeyState::Up) {
                     if (shifted.find(code) != shifted.end()) {
                         keyEvent.code = shifted.at(code);
