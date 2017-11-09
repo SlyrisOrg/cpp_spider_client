@@ -6,12 +6,21 @@
 #define SPIDER_CLIENT_SERVERCOMMANDSESSION_HPP
 
 #include <Core/CommandableSession.hpp>
+#include <Viral/Viral.hpp>
 
 namespace spi
 {
     class ServerCommandSession : public CommandableSession
     {
     public:
+        using Pointer = boost::shared_ptr<ServerCommandSession>;
+
+        template <typename ...Args>
+        static auto createShared(Args &&...args)
+        {
+            return CommandableSession::create<ServerCommandSession>(std::forward<Args>(args)...);
+        }
+
         ServerCommandSession(net::IOManager &io, net::SSLContext &ctx, Viral &v) :
             CommandableSession(io, ctx, "server-cmd"), _viral(v)
         {
@@ -29,7 +38,9 @@ namespace spi
         {
             _log(logging::Level::Debug) << "Ready to receive commands" << std::endl;
             asyncHandshake(net::SSLConnection::HandshakeType::Server,
-                           boost::bind(&ServerCommandSession::handleHandshake, this, net::ErrorPlaceholder));
+                           boost::bind(&ServerCommandSession::handleHandshake,
+                                       shared_from_this_cast<ServerCommandSession>(),
+                                       net::ErrorPlaceholder));
         }
 
     private:
@@ -45,6 +56,7 @@ namespace spi
             _viral.show();
         }
 
+        Buffer _buff;
         Viral &_viral;
     };
 }

@@ -6,15 +6,44 @@
 #define SPIDER_COMMANDABLESESSION_HPP
 
 #include <boost/bind.hpp>
+#include <boost/enable_shared_from_this.hpp>
 #include <log/Logger.hpp>
 #include <Network/ErrorCode.hpp>
 #include <Network/BufferView.hpp>
 #include <Network/SSLConnection.hpp>
 #include <Protocol/CommandHandler.hpp>
 
+namespace utils
+{
+    template <typename T>
+    class InheritableSharedFromThis : public boost::enable_shared_from_this<InheritableSharedFromThis<T>>
+    {
+        using Parent = boost::enable_shared_from_this<InheritableSharedFromThis<T>>;
+
+    public:
+        boost::shared_ptr<T> shared_from_this()
+        {
+            return boost::static_pointer_cast<T>(Parent::shared_from_this());
+        }
+
+        template <typename To>
+        boost::shared_ptr<To> shared_from_this_cast()
+        {
+            return boost::static_pointer_cast<To>(Parent::shared_from_this());
+        }
+
+        template <typename To, typename ...Args>
+        static boost::shared_ptr<To> create(Args &&...args)
+        {
+            return boost::shared_ptr<To>(new To(std::forward<Args>(args)...));
+        }
+
+    };
+}
+
 namespace spi
 {
-    class CommandableSession
+    class CommandableSession : public utils::InheritableSharedFromThis<CommandableSession>
     {
     public:
         CommandableSession(net::IOManager &io, net::SSLContext &ctx, const std::string &name) :
@@ -22,9 +51,7 @@ namespace spi
         {
         }
 
-        virtual ~CommandableSession() noexcept
-        {
-        }
+        virtual ~CommandableSession() noexcept = default;
 
         void onError(std::function<void(CommandableSession *)> &&fct) noexcept
         {
@@ -69,7 +96,7 @@ namespace spi
             _nbReadBytes = 0;
             _expectedSize = 4;
             _readBuff.resize(4);
-            __readData(boost::bind(&CommandableSession::__handleCommandHeader, this,
+            __readData(boost::bind(&CommandableSession::__handleCommandHeader, shared_from_this(),
                                    net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
         }
 
@@ -83,7 +110,7 @@ namespace spi
 
             _nbReadBytes += bytesTransferred;
             if (_nbReadBytes < _expectedSize) {
-                __readData(boost::bind(&CommandableSession::__handleCommandHeader, this,
+                __readData(boost::bind(&CommandableSession::__handleCommandHeader, shared_from_this(),
                                        net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
             } else {
                 auto type = _cmdHandler.identifyMessage(_readBuff);
@@ -118,7 +145,7 @@ namespace spi
             _nbReadBytes = 0;
             _expectedSize = size;
             _readBuff.resize(size);
-            __readData(boost::bind(&CommandableSession::__handleCommand, this,
+            __readData(boost::bind(&CommandableSession::__handleCommand, shared_from_this(),
                                    net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
         }
 
@@ -127,7 +154,7 @@ namespace spi
             if (!ec) {
                 _nbReadBytes += bytesTransferred;
                 if (_nbReadBytes < _expectedSize) {
-                    __readData(boost::bind(&CommandableSession::__handleCommand, this,
+                    __readData(boost::bind(&CommandableSession::__handleCommand, shared_from_this(),
                                            net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
                 } else {
                     _cmdHandler.handleBinaryCommand(_nextCmdType, _readBuff);
@@ -145,7 +172,7 @@ namespace spi
         CommandHandler _cmdHandler;
         std::function<void(CommandableSession *)> _errorCb{[](CommandableSession *) {}};
 
-        std::vector<spi::Byte> _readBuff;
+        Buffer _readBuff;
         size_t _nbReadBytes{0};
         size_t _expectedSize{0};
         proto::MessageType _nextCmdType{proto::MessageType::Unknown};

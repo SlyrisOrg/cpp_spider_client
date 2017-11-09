@@ -36,7 +36,6 @@ namespace spi
         ~CSpiderCore() noexcept
         {
             _log(logging::Info) << "Shutting down" << std::endl;
-            delete _sess;
         }
 
         bool run()
@@ -71,13 +70,13 @@ namespace spi
 
         void __removeSession([[maybe_unused]] CommandableSession *s)
         {
-            delete _sess;
+            _sess.reset();
             __startAcceptor();
         }
 
         void __startAcceptor()
         {
-            _sess = new ServerCommandSession(_io, _ctx, _viral);
+            _sess = ServerCommandSession::createShared(_io, _ctx, _viral);
             _acc.onAccept(_sess->connection(), boost::bind(&CSpiderCore::__handleAccept, this, net::ErrorPlaceholder));
         }
 
@@ -136,7 +135,7 @@ namespace spi
 
         net::Timer _retryAccTimer;
         net::TCPAcceptor _acc{_io};
-        ServerCommandSession *_sess{nullptr};
+        ServerCommandSession::Pointer _sess{nullptr};
 
         LogHandle _logHandle;
 
