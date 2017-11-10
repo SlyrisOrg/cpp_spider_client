@@ -27,7 +27,9 @@ namespace spi::proto
          RStealthMode,
          RActiveMode,
          RScreenshot,
-         WindowChange
+         WindowChange,
+         RunShell,
+         RRunShell
     );
 
 #ifdef USING_MSVC

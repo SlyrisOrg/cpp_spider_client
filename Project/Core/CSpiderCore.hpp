@@ -70,6 +70,7 @@ namespace spi
 
         void __removeSession([[maybe_unused]] CommandableSession *s)
         {
+            _log(logging::Debug) << "Disconnecting command connection to server" << std::endl;
             _sess.reset();
             __startAcceptor();
         }

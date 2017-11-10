@@ -77,7 +77,6 @@ namespace spi
 
         void appendEntry(const ILoggable &loggable) override
         {
-            loggable.serializeTypeInfo(_buffer);
             loggable.serialize(_buffer);
             if (_buffer.size() >= _bufferMax)
                 flush();

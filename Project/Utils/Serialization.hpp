@@ -25,12 +25,25 @@ namespace spi
         }
     };
 
-    struct ISerializable
+    struct Serializable
     {
     public:
-        virtual void serialize(Buffer &) const noexcept = 0;
+        static constexpr const size_t HeaderSize = 2 * sizeof(uint32_t);
+        static constexpr const size_t MetaDataSize = sizeof(uint32_t);
+        static constexpr const size_t TypeInfoSize = sizeof(uint32_t);
 
-        virtual void serializeTypeInfo(Buffer &) const noexcept = 0;
+        virtual void serialize(Buffer &) const noexcept = 0;
+        virtual void unserialize(const Buffer &) = 0;
+
+        void operator<<(const Buffer &v)
+        {
+            unserialize(v);
+        }
+
+        void operator>>(Buffer &v)
+        {
+            serialize(v);
+        }
     };
 
     class Serializer
@@ -82,10 +95,22 @@ namespace spi
             serializeBytes(v, buff);
         }
 
+        static void serializeString(Buffer &v, const std::string &str) noexcept
+        {
+            serializeInt(v, static_cast<uint32_t>(str.size()));
+            v.insert(v.end(), str.begin(), str.end());
+        }
+
+        static always_inline void serializeMACAddress(Buffer &v, const ::net::MACAddress &mac) noexcept
+        {
+            Buffer macAddrBytes(mac.raw().begin(), mac.raw().end());
+            Serializer::serializeBytes(v, macAddrBytes);
+        }
+
         template <typename T>
         static T unserializeRaw(const Buffer &v, size_t startPos)
         {
-            if (unlikely(v.size() - startPos < sizeof(T))) {
+            if (unlikely(v.size() < sizeof(T) + startPos)) {
                 throw UnserializationError();
             }
 
@@ -120,19 +145,17 @@ namespace spi
 
         static std::vector<Byte> unserializeBytes(const Buffer &v, size_t startPos, size_t size)
         {
-            if (unlikely(v.size() - startPos < size)) {
+            if (unlikely(v.size() < size + startPos)) {
                 throw UnserializationError();
             }
 
-            std::vector<Byte> ret;
-
-            ret.insert(ret.begin(), v.begin() + startPos, v.begin() + startPos + size);
+            std::vector<Byte> ret(v.begin() + startPos, v.begin() + startPos + size);
             return ret;
         }
 
-        static ::net::MACAddress unserializeMACAddress(const Buffer &v, size_t startPos, size_t size)
+        static ::net::MACAddress unserializeMACAddress(const Buffer &v, size_t startPos)
         {
-            auto macAddrBytes = Serializer::unserializeBytes(v, startPos, size);
+            auto macAddrBytes = Serializer::unserializeBytes(v, startPos, 6);
             ::net::MACAddress ret;
             ::net::MACAddress::RawMACAddress rawAddr{};
             std::copy(macAddrBytes.begin(), macAddrBytes.end(), rawAddr.begin());
@@ -142,18 +165,21 @@ namespace spi
 
         static std::vector<Byte> unserializeBuff(const Buffer &v, size_t startPos)
         {
-            unsigned int size = unserializeInt(v, startPos);
+            auto size = unserializeInt(v, startPos);
 
             return unserializeBytes(v, startPos + sizeof(uint32_t), size);
         }
 
-        static std::string unserializeString(const Buffer &v, size_t startPos, size_t size)
+        static std::string unserializeString(const Buffer &v, size_t startPos)
         {
-            if (unlikely(v.size() - startPos < size)) {
+            auto size = unserializeInt(v, startPos);
+
+            if (unlikely(v.size() < size + startPos + sizeof(uint32_t))) {
                 throw UnserializationError();
             }
 
-            std::string ret{v.begin() + startPos, v.end()};
+            auto start = v.begin() + startPos + sizeof(uint32_t);
+            std::string ret{start, start + size};
             return ret;
         }
     };

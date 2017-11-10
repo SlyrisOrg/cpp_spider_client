@@ -37,7 +37,6 @@ namespace utils
         {
             return boost::shared_ptr<To>(new To(std::forward<Args>(args)...));
         }
-
     };
 }
 
@@ -73,7 +72,7 @@ namespace spi
         void handleHandshake(const ErrorCode &ec)
         {
             if (!ec) {
-                __readCommandHeader();
+                __asyncReadSize(Serializable::MetaDataSize, boost::bind(&CommandableSession::__handleSize, this));
             } else {
                 _log(logging::Level::Warning) << "Unable to perform SSL handshake with client: "
                                               << ec.message() << std::endl;
@@ -82,25 +81,25 @@ namespace spi
         }
 
         /** Command reading / handling */
-
     private:
         template <typename CallBackT>
-        void __readData(CallBackT &&cb) noexcept
+        void __asyncRead(CallBackT &&cb) noexcept
         {
             _conn.asyncReadSome(net::BufferView(_readBuff.data() + _nbReadBytes, _readBuff.size() - _nbReadBytes),
                                 std::forward<CallBackT>(cb));
         }
 
-        void __readCommandHeader() noexcept
+        void __asyncReadSize(size_t size, std::function<bool()> &&cb) noexcept
         {
             _nbReadBytes = 0;
-            _expectedSize = 4;
-            _readBuff.resize(4);
-            __readData(boost::bind(&CommandableSession::__handleCommandHeader, shared_from_this(),
-                                   net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
+            _expectedSize = size;
+            _readBuff.resize(size);
+            _readCallback = std::move(cb);
+            __asyncRead(boost::bind(&CommandableSession::__handleAsyncRead, shared_from_this(),
+                                    net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
         }
 
-        void __handleCommandHeader(const ErrorCode &ec, size_t bytesTransferred)
+        void __handleAsyncRead(const ErrorCode &ec, size_t bytesTransferred)
         {
             if (ec) {
                 _log(logging::Level::Warning) << "Unable to read command header: " << ec.message() << std::endl;
@@ -110,60 +109,35 @@ namespace spi
 
             _nbReadBytes += bytesTransferred;
             if (_nbReadBytes < _expectedSize) {
-                __readData(boost::bind(&CommandableSession::__handleCommandHeader, shared_from_this(),
-                                       net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
+                __asyncRead(boost::bind(&CommandableSession::__handleAsyncRead, shared_from_this(),
+                                        net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
             } else {
-                auto type = _cmdHandler.identifyMessage(_readBuff);
+                if (!_readCallback())
+                    _errorCb(this);
+            }
+        }
 
-                if (type == spi::proto::MessageType::Unknown) {
-                    _log(logging::Level::Warning) << "Ignoring unrecognized command" << std::endl;
-                    __readCommandHeader();
-                } else {
-                    __handleCommandType(type);
+        bool __handleSize()
+        {
+            auto size = Serializer::unserializeInt(_readBuff, 0);
+            __asyncReadSize(size, boost::bind(&CommandableSession::__handleData, this));
+            return true;
+        }
+
+        bool __handleData()
+        {
+            auto type = _cmdHandler.identifyMessage(_readBuff);
+            if (type != proto::MessageType::Unknown) {
+                if (!_cmdHandler.canHandleCommand(type)) {
+                    _log(logging::Level::Warning) << "Rejecting unexpected command " << type.toString() << std::endl;
+                    return false;
                 }
-            }
-        }
-
-        void __handleCommandType(proto::MessageType type)
-        {
-            size_t size;
-
-            if (!_cmdHandler.canHandleCommand(type)) {
-                _log(logging::Level::Warning) << "Rejecting unexpected command " << type.toString() << std::endl;
-                _errorCb(this);
-            } else if ((size = _cmdHandler.getSerializedSize(type)) == 0) {
-                _cmdHandler.handleBinaryCommand(type, Buffer());
-                __readCommandHeader();
+                _cmdHandler.handleBinaryCommand(type, _readBuff);
             } else {
-                __readCommandBody(type, size);
+                _log(logging::Level::Warning) << "Ignoring unrecognized command" << std::endl;
             }
-        }
-
-        void __readCommandBody(spi::proto::MessageType type, size_t size) noexcept
-        {
-            _nextCmdType = type;
-            _nbReadBytes = 0;
-            _expectedSize = size;
-            _readBuff.resize(size);
-            __readData(boost::bind(&CommandableSession::__handleCommand, shared_from_this(),
-                                   net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
-        }
-
-        void __handleCommand(const ErrorCode &ec, size_t bytesTransferred)
-        {
-            if (!ec) {
-                _nbReadBytes += bytesTransferred;
-                if (_nbReadBytes < _expectedSize) {
-                    __readData(boost::bind(&CommandableSession::__handleCommand, shared_from_this(),
-                                           net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
-                } else {
-                    _cmdHandler.handleBinaryCommand(_nextCmdType, _readBuff);
-                    __readCommandHeader();
-                }
-            } else {
-                _log(logging::Level::Warning) << "Unable to read command data: " << ec.message() << std::endl;
-                _errorCb(this);
-            }
+            __asyncReadSize(Serializable::MetaDataSize, boost::bind(&CommandableSession::__handleSize, this));
+            return true;
         }
 
     protected:
@@ -172,10 +146,11 @@ namespace spi
         CommandHandler _cmdHandler;
         std::function<void(CommandableSession *)> _errorCb{[](CommandableSession *) {}};
 
+    private:
+        std::function<bool()> _readCallback;
         Buffer _readBuff;
         size_t _nbReadBytes{0};
         size_t _expectedSize{0};
-        proto::MessageType _nextCmdType{proto::MessageType::Unknown};
     };
 }
 
