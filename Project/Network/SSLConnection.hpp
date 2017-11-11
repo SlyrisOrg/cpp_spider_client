@@ -7,6 +7,7 @@
 
 #include <boost/asio/ssl.hpp>
 #include <boost/asio.hpp>
+#include <boost/bind.hpp>
 #include <Network/SSLContext.hpp>
 #include <Network/IOManager.hpp>
 
@@ -71,10 +72,47 @@ namespace spi::net
             _socket.async_read_some(boost::asio::buffer(buff.data(), buff.size()), std::forward<CallBackT>(cb));
         }
 
+    private:
+        template <typename BufferT, typename CallBackT>
+        void __handleReadSize(const ErrorCode &ec, size_t nbRead, BufferT buff, CallBackT cb)
+        {
+            if (ec) {
+                cb(ec);
+            } else {
+                BufferT newBuff(reinterpret_cast<char *>(buff.data()) + nbRead, buff.size() - nbRead);
+
+                if (newBuff.size()) {
+                    asyncReadSize(newBuff, std::forward<CallBackT>(cb));
+                } else {
+                    cb(ec);
+                }
+            }
+        }
+
+    public:
+        template <typename BufferT, typename CallBackT>
+        void asyncReadSize(BufferT buff, CallBackT &&cb) noexcept
+        {
+            asyncReadSome(buff, boost::bind(&SSLConnection::__handleReadSize<BufferT, CallBackT>, this,
+                                            ErrorPlaceholder, BytesTransferredPlaceholder,
+                                            buff, std::forward<CallBackT>(cb)));
+        }
+
         template <typename BufferT>
         size_t readSome(BufferT buff, ErrorCode &ec) noexcept
         {
             return _socket.read_some(boost::asio::buffer(buff.data(), buff.size()), ec.get());
+        }
+
+        template <typename BufferT>
+        void readSize(BufferT buff, ErrorCode &ec) noexcept
+        {
+            while (buff.size()) {
+                auto ret = readSome(buff, ec);
+                if (ec)
+                    break;
+                buff = BufferT(reinterpret_cast<char *>(buff.data()) + ret, buff.size() - ret);
+            }
         }
 
         template <typename BufferT, typename CallBackT>

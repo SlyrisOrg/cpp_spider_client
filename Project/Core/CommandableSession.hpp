@@ -6,6 +6,7 @@
 #define SPIDER_COMMANDABLESESSION_HPP
 
 #include <boost/bind.hpp>
+#include <boost/bind/protect.hpp>
 #include <boost/enable_shared_from_this.hpp>
 #include <log/Logger.hpp>
 #include <Network/ErrorCode.hpp>
@@ -72,7 +73,10 @@ namespace spi
         void handleHandshake(const ErrorCode &ec)
         {
             if (!ec) {
-                __asyncReadSize(Serializable::MetaDataSize, boost::bind(&CommandableSession::__handleSize, this));
+                _readBuff.resize(Serializable::MetaDataSize);
+                _conn.asyncReadSize(net::BufferView(_readBuff.data(), _readBuff.size()),
+                                    boost::protect(boost::bind(&CommandableSession::__handleSize, this,
+                                                               net::ErrorPlaceholder)));
             } else {
                 _log(logging::Level::Warning) << "Unable to perform SSL handshake with client: "
                                               << ec.message() << std::endl;
@@ -80,64 +84,46 @@ namespace spi
             }
         }
 
-        /** Command reading / handling */
     private:
-        template <typename CallBackT>
-        void __asyncRead(CallBackT &&cb) noexcept
+        /** Two-phase reading: size, then data */
+
+        void __handleSize(const ErrorCode &ec)
         {
-            _conn.asyncReadSome(net::BufferView(_readBuff.data() + _nbReadBytes, _readBuff.size() - _nbReadBytes),
-                                std::forward<CallBackT>(cb));
+            if (!ec) {
+                auto size = Serializer::unserializeInt(_readBuff, 0);
+                _readBuff.resize(size);
+                _conn.asyncReadSize(net::BufferView(_readBuff.data(), _readBuff.size()),
+                                    boost::protect(boost::bind(&CommandableSession::__handleData, this,
+                                                               net::ErrorPlaceholder)));
+            } else {
+                _log(logging::Level::Warning) << "Unable to read command header: " << ec.message() << std::endl;
+                _errorCb(this);
+            }
         }
 
-        void __asyncReadSize(size_t size, std::function<bool()> &&cb) noexcept
-        {
-            _nbReadBytes = 0;
-            _expectedSize = size;
-            _readBuff.resize(size);
-            _readCallback = std::move(cb);
-            __asyncRead(boost::bind(&CommandableSession::__handleAsyncRead, shared_from_this(),
-                                    net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
-        }
-
-        void __handleAsyncRead(const ErrorCode &ec, size_t bytesTransferred)
+        void __handleData(const ErrorCode &ec)
         {
             if (ec) {
-                _log(logging::Level::Warning) << "Unable to read command header: " << ec.message() << std::endl;
+                _log(logging::Level::Warning) << "Unable to read command data" << ec.message() << std::endl;
                 _errorCb(this);
                 return;
             }
 
-            _nbReadBytes += bytesTransferred;
-            if (_nbReadBytes < _expectedSize) {
-                __asyncRead(boost::bind(&CommandableSession::__handleAsyncRead, shared_from_this(),
-                                        net::ErrorPlaceholder, net::BytesTransferredPlaceholder));
-            } else {
-                if (!_readCallback())
-                    _errorCb(this);
-            }
-        }
-
-        bool __handleSize()
-        {
-            auto size = Serializer::unserializeInt(_readBuff, 0);
-            __asyncReadSize(size, boost::bind(&CommandableSession::__handleData, this));
-            return true;
-        }
-
-        bool __handleData()
-        {
             auto type = _cmdHandler.identifyMessage(_readBuff);
             if (type != proto::MessageType::Unknown) {
                 if (!_cmdHandler.canHandleCommand(type)) {
                     _log(logging::Level::Warning) << "Rejecting unexpected command " << type.toString() << std::endl;
-                    return false;
+                    _errorCb(this);
+                    return;
                 }
                 _cmdHandler.handleBinaryCommand(type, _readBuff);
             } else {
                 _log(logging::Level::Warning) << "Ignoring unrecognized command" << std::endl;
             }
-            __asyncReadSize(Serializable::MetaDataSize, boost::bind(&CommandableSession::__handleSize, this));
-            return true;
+            _readBuff.resize(Serializable::MetaDataSize);
+            _conn.asyncReadSize(net::BufferView(_readBuff.data(), _readBuff.size()),
+                                boost::protect(boost::bind(&CommandableSession::__handleSize, this,
+                                                           net::ErrorPlaceholder)));
         }
 
     protected:
@@ -147,10 +133,7 @@ namespace spi
         std::function<void(CommandableSession *)> _errorCb{[](CommandableSession *) {}};
 
     private:
-        std::function<bool()> _readCallback;
         Buffer _readBuff;
-        size_t _nbReadBytes{0};
-        size_t _expectedSize{0};
     };
 }
 
