@@ -136,15 +136,16 @@ namespace spi::details
         bool _capsStatus{false};
         std::unordered_map<unsigned long, proto::KeyCode> const *_toBinds{&_unaltered};
 
-        static const std::array<char, 47> _printable;
+        static const std::array<char, 51> _printable;
         static const std::unordered_map<unsigned long, proto::KeyCode> _unaltered;
         static const std::unordered_map<unsigned long, proto::KeyCode> _shifted;
         static const std::unordered_map<unsigned long, proto::KeyCode> _altGred;
     };
 
-    const std::array<char, 47> FileWatcher::_printable = {16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30, 31, 32, 33, 34,
+    const std::array<char, 51> FileWatcher::_printable = {16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30, 31, 32, 33, 34,
                                                           35, 36, 37, 38, 39, 44, 45, 46, 47, 48, 49, 11, 2, 3, 4, 5, 6,
-                                                          7, 8, 9, 10, 12, 13, 26, 27, 40, 43, 50, 51, 52, 53, 86};
+                                                          7, 8, 9, 10, 12, 13, 26, 27, 40, 43, 50, 51, 52, 53, 86, 57,
+                                                          14, 15, 28};
     const std::unordered_map<unsigned long, proto::KeyCode> FileWatcher::_unaltered = {
         {16,  proto::KeyCode::a},
         {17,  proto::KeyCode::z},
