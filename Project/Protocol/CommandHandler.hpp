@@ -26,62 +26,6 @@ namespace spi
             return proto::MessageType::Unknown;
         }
 
-        Buffer makeHeader(proto::MessageType type) const noexcept
-        {
-            Buffer ret;
-
-            Serializer::serializeInt(ret, type);
-            return ret;
-        }
-
-        static constexpr const size_t invalidSize = static_cast<size_t>(-1);
-
-        size_t getSerializedSize(proto::MessageType type) const noexcept
-        {
-            switch (type) {
-                case proto::MessageType::ReplyCode:
-                    return proto::ReplyCode::SerializedSize;
-                case proto::MessageType::Bye:
-                    return proto::Bye::SerializedSize;
-                case proto::MessageType::Hello:
-                    return proto::Hello::SerializedSize;
-                case proto::MessageType::KeyEvent:
-                    return proto::KeyEvent::SerializedSize;
-                case proto::MessageType::MouseClick:
-                    return proto::MouseClick::SerializedSize;
-                case proto::MessageType::MouseMove:
-                    return proto::MouseMove::SerializedSize;
-                case proto::MessageType::RawData:
-                    return proto::RawData::SerializedSize;
-                case proto::MessageType::ImageData:
-                    return proto::ImageData::SerializedSize;
-                case proto::MessageType::Screenshot:
-                    return proto::Screenshot::SerializedSize;
-                case proto::MessageType::StealthMode:
-                    return proto::Screenshot::SerializedSize;
-                case proto::MessageType::ActiveMode:
-                    return proto::Screenshot::SerializedSize;
-                case proto::MessageType::RList:
-                    return proto::RList::SerializedSize;
-                case proto::MessageType::RListReply:
-                    return proto::RListReply::SerializedSize;
-                case proto::MessageType::RStealthMode:
-                    return proto::RStealthMode::SerializedSize;
-                case proto::MessageType::RActiveMode:
-                    return proto::RActiveMode::SerializedSize;
-                case proto::MessageType::RScreenshot:
-                    return proto::RScreenshot::SerializedSize;
-                case proto::MessageType::WindowChange:
-                    return proto::WindowChanged::SerializedSize;
-                case proto::MessageType::RunShell:
-                    return proto::RunShell::SerializedSize;
-                case proto::MessageType::RRunShell:
-                    return proto::RRunShell::SerializedSize;
-                default:
-                    return invalidSize;
-            }
-        }
-
         bool canHandleCommand(proto::MessageType type) const noexcept
         {
             return _cbs.find((proto::MessageType::EnumType)type) != _cbs.end();
