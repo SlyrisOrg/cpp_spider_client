@@ -803,10 +803,9 @@ namespace spi::proto
         {
             out.reserve(out.size() + HeaderSize + SerializedSize + cmd.size());
 
-            Buffer buff(cmd.begin(), cmd.end());
+            serializeHeader(out);
 
-            out.reserve(SerializedSize + cmd.size());
-            Serializer::serializeBuff(out, buff);
+            Serializer::serializeString(out, cmd);
         }
 
         void serializeHeader(Buffer &out) const noexcept
@@ -850,16 +849,17 @@ namespace spi::proto
 
         void serialize(Buffer &out) const noexcept override
         {
-            out.reserve(out.size() + SerializedSize + cmd.size());
-            Serializer::serializeMACAddress(out, target);
+            out.reserve(out.size() + HeaderSize + SerializedSize + cmd.size());
 
-            Buffer buff(cmd.begin(), cmd.end());
-            Serializer::serializeBuff(out, buff);
+            serializeHeader(out);
+
+            Serializer::serializeMACAddress(out, target);
+            Serializer::serializeString(out, cmd);
         }
 
         void serializeHeader(Buffer &out) const noexcept
         {
-            out.reserve(out.size() + HeaderSize);
+            Serializer::serializeInt(out, static_cast<uint32_t>(TypeInfoSize + SerializedSize + cmd.size()));
             Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::RRunShell));
         }
 
