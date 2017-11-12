@@ -75,7 +75,7 @@ namespace spi
             if (!ec) {
                 _readBuff.resize(Serializable::MetaDataSize);
                 _conn.asyncReadSize(net::BufferView(_readBuff.data(), _readBuff.size()),
-                                    boost::protect(boost::bind(&CommandableSession::__handleSize, this,
+                                    boost::protect(boost::bind(&CommandableSession::__handleSize, shared_from_this(),
                                                                net::ErrorPlaceholder)));
             } else {
                 _log(logging::Level::Warning) << "Unable to perform SSL handshake with client: "
@@ -93,7 +93,7 @@ namespace spi
                 auto size = Serializer::unserializeInt(_readBuff, 0);
                 _readBuff.resize(size);
                 _conn.asyncReadSize(net::BufferView(_readBuff.data(), _readBuff.size()),
-                                    boost::protect(boost::bind(&CommandableSession::__handleData, this,
+                                    boost::protect(boost::bind(&CommandableSession::__handleData, shared_from_this(),
                                                                net::ErrorPlaceholder)));
             } else {
                 _log(logging::Level::Warning) << "Unable to read command header: " << ec.message() << std::endl;
@@ -122,7 +122,7 @@ namespace spi
             }
             _readBuff.resize(Serializable::MetaDataSize);
             _conn.asyncReadSize(net::BufferView(_readBuff.data(), _readBuff.size()),
-                                boost::protect(boost::bind(&CommandableSession::__handleSize, this,
+                                boost::protect(boost::bind(&CommandableSession::__handleSize, shared_from_this(),
                                                            net::ErrorPlaceholder)));
         }
 
