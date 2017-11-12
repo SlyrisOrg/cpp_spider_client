@@ -352,7 +352,7 @@ namespace spi::proto
 
         void serializeHeader(Buffer &out) const noexcept
         {
-            Serializer::serializeInt(out, static_cast<uint32_t>(TypeInfoSize + HeaderSize));
+            Serializer::serializeInt(out, static_cast<uint32_t>(TypeInfoSize + SerializedSize));
             Serializer::serializeInt(out, static_cast<uint32_t>(MessageType::MouseMove));
         }
 
