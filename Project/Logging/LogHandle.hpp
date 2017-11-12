@@ -14,6 +14,7 @@
 #include <Network/ClientSession.hpp>
 #include <Network/SSLConnection.hpp>
 #include <Network/ErrorCode.hpp>
+#include <Network/BufferView.hpp>
 #include <Protocol/CommandHandler.hpp>
 #include <Logging/AbstractLogHandle.hpp>
 #include <Configuration.hpp>

