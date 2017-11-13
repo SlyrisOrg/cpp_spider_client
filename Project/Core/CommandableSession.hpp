@@ -47,7 +47,7 @@ namespace spi
     {
     public:
         CommandableSession(net::IOManager &io, net::SSLContext &ctx, const std::string &name) :
-            _conn(io, ctx), _log(name, logging::Level::Debug)
+            _conn(io, ctx), _log(name, logging::Debug)
         {
         }
 
@@ -78,8 +78,7 @@ namespace spi
                                     boost::protect(boost::bind(&CommandableSession::__handleSize, shared_from_this(),
                                                                net::ErrorPlaceholder)));
             } else {
-                _log(logging::Level::Warning) << "Unable to perform SSL handshake with client: "
-                                              << ec.message() << std::endl;
+                _log(logging::Warning) << "Unable to perform SSL handshake with client: " << ec.message() << std::endl;
                 _errorCb(this);
             }
         }
@@ -96,7 +95,7 @@ namespace spi
                                     boost::protect(boost::bind(&CommandableSession::__handleData, shared_from_this(),
                                                                net::ErrorPlaceholder)));
             } else {
-                _log(logging::Level::Warning) << "Unable to read command header: " << ec.message() << std::endl;
+                _log(logging::Warning) << "Unable to read command header: " << ec.message() << std::endl;
                 _errorCb(this);
             }
         }
@@ -104,7 +103,7 @@ namespace spi
         void __handleData(const ErrorCode &ec)
         {
             if (ec) {
-                _log(logging::Level::Warning) << "Unable to read command data" << ec.message() << std::endl;
+                _log(logging::Warning) << "Unable to read command data" << ec.message() << std::endl;
                 _errorCb(this);
                 return;
             }
@@ -112,13 +111,13 @@ namespace spi
             auto type = _cmdHandler.identifyMessage(_readBuff);
             if (type != proto::MessageType::Unknown) {
                 if (!_cmdHandler.canHandleCommand(type)) {
-                    _log(logging::Level::Warning) << "Rejecting unexpected command " << type.toString() << std::endl;
+                    _log(logging::Warning) << "Rejecting unexpected command " << type.toString() << std::endl;
                     _errorCb(this);
                     return;
                 }
                 _cmdHandler.handleBinaryCommand(type, _readBuff);
             } else {
-                _log(logging::Level::Warning) << "Ignoring unrecognized command" << std::endl;
+                _log(logging::Warning) << "Ignoring unrecognized command" << std::endl;
             }
             _readBuff.resize(Serializable::MetaDataSize);
             _conn.asyncReadSize(net::BufferView(_readBuff.data(), _readBuff.size()),

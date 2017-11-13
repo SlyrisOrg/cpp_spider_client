@@ -25,7 +25,6 @@ include_directories(vendor/core/Project/core-network/project)
 
 set(HEADERS_SPIDER_NETWORK
         Project/Network/IOManager.hpp
-        Project/Network/ClientSession.hpp
         Project/Network/SSLContext.hpp
         Project/Network/SSLConnection.hpp
         Project/Network/ErrorCode.hpp
@@ -56,6 +55,7 @@ set(HEADERS_SPIDER_UTILS
 set(HEADERS_SPIDER_CORE
         Project/Core/CommandableSession.hpp
         Project/Core/ServerCommandSession.hpp
+        Project/Core/ClientSession.hpp
         Project/Core/CSpiderCore.hpp
         )
 

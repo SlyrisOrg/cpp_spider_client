@@ -14,6 +14,8 @@ namespace spi::details
     class ViralImpl
     {
     protected:
+        logging::Logger _log{"spider-viral", logging::Debug};
+
         bool antiPreload() noexcept
         {
             return true;

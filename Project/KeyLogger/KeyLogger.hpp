@@ -55,7 +55,7 @@ namespace spi
         virtual ~KeyLogger() noexcept = default;
 
     protected:
-        logging::Logger _log{"keylogger", logging::Level::Debug};
+        logging::Logger _log{"keylogger", logging::Debug};
         MouseMoveCallback _mouseMoveCallback;
         MouseClickCallback _mouseClickCallback;
         KeyPressCallback _keyPressCallback;

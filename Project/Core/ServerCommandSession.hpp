@@ -38,7 +38,7 @@ namespace spi
 
         void startSession() noexcept
         {
-            _log(logging::Level::Debug) << "Ready to receive commands" << std::endl;
+            _log(logging::Debug) << "Ready to receive commands" << std::endl;
             asyncHandshake(net::SSLConnection::HandshakeType::Server,
                            boost::bind(&ServerCommandSession::handleHandshake,
                                        shared_from_this_cast<ServerCommandSession>(),

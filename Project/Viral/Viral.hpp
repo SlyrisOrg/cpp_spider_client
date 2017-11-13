@@ -34,7 +34,7 @@ namespace spi
 
         virtual ~Viral() noexcept
         {
-            _log(logging::Info) << " shutting down." << std::endl;
+            _log(logging::Info) << "Shutting down" << std::endl;
         }
 
         void hide() const noexcept
@@ -75,7 +75,6 @@ namespace spi
 
 
     private:
-        logging::Logger _log{"spider-viral", logging::Level::Debug};
         KeyLogger *_keylogger{nullptr};
     };
 }

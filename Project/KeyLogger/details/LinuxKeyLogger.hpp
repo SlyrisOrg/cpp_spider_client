@@ -127,7 +127,7 @@ namespace spi::details
         Buffer _buff;
         unsigned long _nbReadBytes{0};
         net::PosixStream _stream;
-        logging::Logger _log{"Keylogger-filewatcher", logging::Level::Debug};
+        logging::Logger _log{"Keylogger-filewatcher", logging::Debug};
         MouseMoveCallback _mouseMoveCallback;
         MouseClickCallback _mouseClickCallback;
         KeyPressCallback _keyPressCallback;

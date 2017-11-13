@@ -29,13 +29,13 @@ namespace spi
         ~ClientSession() override = default;
 
         template <typename LogHandleCallback>
-        void onConnectSuccess(LogHandleCallback&& callback)
+        void onConnectSuccess(LogHandleCallback &&callback)
         {
             _connectSuccessCallback = callback;
         }
 
         template <typename LogHandleCallback>
-        void onConnectFailure(LogHandleCallback&& callback)
+        void onConnectFailure(LogHandleCallback &&callback)
         {
             _connectFailureCallback = callback;
         }
@@ -81,8 +81,8 @@ namespace spi
                 _connectSuccessCallback();
             } else {
                 _connectFailureCallback();
-                _log(logging::Level::Warning) << "Unable to authenticate: retrying in "
-                                              << _conf.retryTime << " seconds" << std::endl;
+                _log(logging::Warning) << "Unable to authenticate: retrying in "
+                                       << _conf.retryTime << " seconds" << std::endl;
                 __rescheduleConnection(_conf.retryTime);
             }
         }
@@ -102,8 +102,8 @@ namespace spi
                                                                 this, net::ErrorPlaceholder));
             } else {
                 _connectFailureCallback();
-                _log(logging::Level::Warning) << "Unable to perform SSL handshake: retrying in "
-                                              << _conf.retryTime << " seconds" << std::endl;
+                _log(logging::Warning) << "Unable to perform SSL handshake: retrying in "
+                                       << _conf.retryTime << " seconds" << std::endl;
                 __rescheduleConnection(_conf.retryTime);
             }
         }
@@ -130,7 +130,7 @@ namespace spi
         net::IOManager &_ioManager;
         net::Timer _timer;
         net::SSLConnection _sslConnection{_ioManager, _ctx};
-        logging::Logger _log{"server-session", logging::Level::Info};
+        logging::Logger _log{"server-session", logging::Info};
         cfg::Config _conf;
     };
 }

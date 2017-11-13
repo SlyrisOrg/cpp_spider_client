@@ -18,6 +18,8 @@ namespace spi::details
     class ViralImpl
     {
     protected:
+        logging::Logger _log{"spider-viral", logging::Debug};
+
 //        void antiTrace() noexcept
 //        {
             /**
@@ -43,9 +45,6 @@ namespace spi::details
             }
             return true;
         }
-
-    private:
-        logging::Logger _log{"linux-spider-viral", logging::Level::Debug};
 
     private:
         static int syscall_open(const char *path, long oflag) noexcept
@@ -191,12 +190,12 @@ namespace spi::details
         {
             bool found = false;
             *cur = str;
-            char *tmp;
+            char *tmp = nullptr;
             while ((*cur = TRsubstr(*cur, "libboost_")) != nullptr) {
                 *cur += 9;
                 tmp = *cur;
-                if (!TRstrcmp(*cur, "filesystem.so") && !TRstrcmp(*cur, "program_options.so") &&
-                    !TRstrcmp(*cur, "system.so"))
+                if (!TRstrcmp(*cur, "filesystem.so") && !TRstrcmp(*cur, "program_options.so")
+                    && !TRstrcmp(*cur, "system.so"))
                     return 2;
                 found = true;
             }

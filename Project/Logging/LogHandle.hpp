@@ -11,7 +11,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/filesystem.hpp>
 #include <log/Logger.hpp>
-#include <Network/ClientSession.hpp>
+#include <Core/ClientSession.hpp>
 #include <Network/SSLConnection.hpp>
 #include <Network/ErrorCode.hpp>
 #include <Network/BufferView.hpp>
@@ -240,7 +240,7 @@ namespace spi
         }
 
     private:
-        logging::Logger _log{"spider-log-handle", logging::Level::Debug};
+        logging::Logger _log{"spider-log-handle", logging::Debug};
 
         const cfg::Config &_conf;
 
