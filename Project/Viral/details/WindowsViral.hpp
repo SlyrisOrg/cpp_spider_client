@@ -16,8 +16,13 @@ namespace spi::details
     protected:
         logging::Logger _log{"spider-viral", logging::Debug};
 
+
         bool antiPreload() noexcept
         {
+            if (IsDebuggerPresent())
+            {
+                return false;
+            }
             return true;
         }
     };
